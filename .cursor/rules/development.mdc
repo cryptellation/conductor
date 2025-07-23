@@ -1,4 +1,27 @@
 
+# Environment Variable and GitHub CLI Usage Rule
+
+## .env Loading for Tests
+- Before running any tests (locally or in CI), always ensure that environment variables from a `.env` file (but not example env files) are loaded into the environment.
+- Use a tool like `direnv`, `dotenv`, or a shell command to source the `.env` file before test execution.
+- If a test requires a specific variable (e.g., `GITHUB_TOKEN`), document this in the test or README.
+- Example (shell):
+  ```sh
+  export $(grep -v '^#' example.env | xargs) && go test ./...
+  ```
+- Tests that depend on environment variables must skip gracefully if the required variable is not set (see integration test pattern in `internal/adapters/github/client_test.go`).
+
+## GitHub CLI (gh) Usage
+- When using the GitHub CLI (`gh`), ensure that the `GITHUB_TOKEN` environment variable is **not** set in the environment.
+- If `GITHUB_TOKEN` is set, prefer using the Go client or API directly for authentication.
+- Only use `gh` for operations that do not require a `GITHUB_TOKEN`, or after unsetting it:
+  ```sh
+  unset GITHUB_TOKEN && gh <command>
+  ```
+- Document in scripts or README when and why `gh` is used instead of the Go client or direct API calls.
+
+---
+
 # Development Plan & Feature Branch Workflow Rule
 
 When the AI is asked to perform a task from the development plan (e.g., in `docs/development_plan.md`) or to implement a new feature:
