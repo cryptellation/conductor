@@ -3,15 +3,17 @@
 
 When the AI is asked to perform a task from the development plan (e.g., in `docs/development_plan.md`) or to implement a new feature:
 
-1. **Branch Creation**: Cursor must create a new git branch for each new feature or each point in the development plan that the user requests to implement. The branch name should be descriptive of the feature or task. Branch prefix should be "BREAKING-CHANGE-", "feat-", or "fix-".
-2. **Status Update**: Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
-3. **Development**: All work for the feature or subtask must be committed to the new branch.
-4. **Completion & Review**:
+1. **Status Update**: Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
+2. **Development**: All work for the feature or subtask should be done on the current branch until ready to commit.
+3. **Branch Creation (Before Commit)**: Just before committing the changes for a new feature or subtask, Cursor must create a new git branch. The branch name should be descriptive of the feature or task. Branch prefix should be "BREAKING-CHANGE-", "feat-", or "fix-".
+4. **Committing**: All work for the feature or subtask must be committed to the new branch.
+5. **Completion & Review**:
     - When the implementation is complete, Cursor must prompt the user for review.
     - The status must remain `in progress` until the user has reviewed the feature and confirmed that all tests are green.
-5. **Final Status**: Only after user approval and successful test results, Cursor may update the status to `done`.
-6. **Committing & Pushing to GitHub**: Cursor must commit all code changes with a commit message prefix of either "BREAKING-CHANGE:", "feat:", or "fix:". Optionally, Cursor can include the scope of the change in brackets between the prefix and the message (e.g., "fix(cmd): ..."). After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub.
-7. **Pull Request & Merge**: After pushing the branch, Cursor must create a pull request, wait for all required checks to pass, and merge the PR automatically once all checks are successful.
+6. **Final Status**: Only after user approval and successful test results, Cursor may update the status to `done`.
+7. **Pushing & Pull Request**: After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub, create a pull request, and:
+    - Wait for all required checks to pass and merge the PR automatically once all checks are successful, **or**
+    - If there are no checks, merge the PR immediately.
 8. **Go back on main and update**: Once the user indicates that the PR has been merged or Cursor merged it successfully, Cursor must go back to main and git pull.
 
 ## Statuses
@@ -44,11 +46,12 @@ After user review/approval and all tests are green:
 ## Branch Workflow Example
 
 1. User requests: "Implement feature X."
-2. Cursor creates a branch: `feat/x-implementation` (or with the appropriate prefix: "BREAKING-CHANGE-", "feat-", or "fix-" and optional scope in brackets, e.g., `fix(cmd)-x-implementation`)
-3. Cursor sets the status to `in progress` in the development plan
-4. Cursor implements the feature and commits all changes to the branch using commit messages with the required prefix and optional scope (e.g., `feat(cmd): add X implementation`)
-5. Cursor prompts the user for review and test confirmation
-6. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
-7. Cursor creates a pull request, waits for all required checks to pass, and merges the PR automatically once all checks are successful
-8. Cursor sets the status to `done` in the development plan
-9. Once the PR is merged, Cursor switches back to main and pulls the latest changes
+2. Cursor sets the status to `in progress` in the development plan
+3. Cursor implements the feature on the current branch
+4. Just before committing, Cursor creates a branch: `feat/x-implementation` (or with the appropriate prefix: "BREAKING-CHANGE-", "feat-", or "fix-" and optional scope in brackets, e.g., `fix(cmd)-x-implementation`)
+5. Cursor commits all changes to the new branch using commit messages with the required prefix and optional scope (e.g., `feat(cmd): add X implementation`)
+6. Cursor prompts the user for review and test confirmation
+7. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
+8. Cursor creates a pull request, waits for all required checks to pass and merges the PR automatically, or merges immediately if there are no checks
+9. Cursor sets the status to `done` in the development plan
+10. Once the PR is merged, Cursor switches back to main and pulls the latest changes
