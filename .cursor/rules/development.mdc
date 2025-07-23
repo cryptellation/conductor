@@ -1,0 +1,55 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# Development Plan & Feature Branch Workflow Rule
+
+When the AI is asked to perform a task from the development plan (e.g., in `docs/development_plan.md`) or to implement a new feature:
+
+1. **Branch Creation**: Cursor must create a new git branch for each new feature or each point in the development plan that the user requests to implement. The branch name should be descriptive of the feature or task.
+2. **Status Update**: Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
+3. **Development**: All work for the feature or subtask must be committed to the new branch.
+4. **Completion & Review**:
+    - When the implementation is complete, Cursor must prompt the user for review.
+    - The status must remain `in progress` until the user has reviewed the feature and confirmed that all tests are green.
+5. **Pushing to GitHub**: After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub.
+6. **Final Status**: Only after user approval and successful test results, Cursor may update the status to `done`.
+
+## Statuses
+- `to do`: Not started
+- `in progress`: Task is being worked on
+- `done`: Task is completed, reviewed, and approved by a human
+
+## Example
+
+Before:
+```markdown
+- 1.1.1 Specify how repositories, services, and libraries are listed in a YAML configuration file.
+  - Status:
+```
+
+After starting work:
+```markdown
+- 1.1.1 Specify how repositories, services, and libraries are listed in a YAML configuration file.
+  - Status: in progress
+```
+
+After user review/approval and all tests are green:
+```markdown
+- 1.1.1 Specify how repositories, services, and libraries are listed in a YAML configuration file.
+  - Status: done
+```
+
+---
+
+## Branch Workflow Example
+
+1. User requests: "Implement feature X."
+2. Cursor creates branch: `feature/x-implementation`
+3. Cursor sets status to `in progress` in the development plan
+4. Cursor implements the feature and commits to the branch
+5. Cursor prompts user for review and test confirmation
+6. After user approval and green tests, Cursor pushes the branch to GitHub
+7. Cursor sets status to `done` in the development plan
