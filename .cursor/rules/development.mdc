@@ -1,21 +1,18 @@
----
-description:
-globs:
-alwaysApply: true
----
 
 # Development Plan & Feature Branch Workflow Rule
 
 When the AI is asked to perform a task from the development plan (e.g., in `docs/development_plan.md`) or to implement a new feature:
 
-1. **Branch Creation**: Cursor must create a new git branch for each new feature or each point in the development plan that the user requests to implement. The branch name should be descriptive of the feature or task.
+1. **Branch Creation**: Cursor must create a new git branch for each new feature or each point in the development plan that the user requests to implement. The branch name should be descriptive of the feature or task. Branch prefix should be "BREAKING-CHANGE-", "feat-", or "fix-".
 2. **Status Update**: Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
 3. **Development**: All work for the feature or subtask must be committed to the new branch.
 4. **Completion & Review**:
     - When the implementation is complete, Cursor must prompt the user for review.
     - The status must remain `in progress` until the user has reviewed the feature and confirmed that all tests are green.
-5. **Pushing to GitHub**: After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub.
-6. **Final Status**: Only after user approval and successful test results, Cursor may update the status to `done`.
+5. **Final Status**: Only after user approval and successful test results, Cursor may update the status to `done`.
+6. **Committing & Pushing to GitHub**: Cursor must commit all code changes with a commit message prefix of either "BREAKING-CHANGE:", "feat:", or "fix:". Optionally, Cursor can include the scope of the change in brackets between the prefix and the message (e.g., "fix(cmd): ..."). After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub.
+7. **Pull Request & Merge**: After pushing the branch, Cursor must create a pull request, wait for all required checks to pass, and merge the PR automatically once all checks are successful.
+8. **Go back on main and update**: Once the user indicates that the PR has been merged or Cursor merged it successfully, Cursor must go back to main and git pull.
 
 ## Statuses
 - `to do`: Not started
@@ -47,9 +44,11 @@ After user review/approval and all tests are green:
 ## Branch Workflow Example
 
 1. User requests: "Implement feature X."
-2. Cursor creates branch: `feature/x-implementation`
-3. Cursor sets status to `in progress` in the development plan
-4. Cursor implements the feature and commits to the branch
-5. Cursor prompts user for review and test confirmation
-6. After user approval and green tests, Cursor pushes the branch to GitHub
-7. Cursor sets status to `done` in the development plan
+2. Cursor creates a branch: `feat/x-implementation` (or with the appropriate prefix: "BREAKING-CHANGE-", "feat-", or "fix-" and optional scope in brackets, e.g., `fix(cmd)-x-implementation`)
+3. Cursor sets the status to `in progress` in the development plan
+4. Cursor implements the feature and commits all changes to the branch using commit messages with the required prefix and optional scope (e.g., `feat(cmd): add X implementation`)
+5. Cursor prompts the user for review and test confirmation
+6. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
+7. Cursor creates a pull request, waits for all required checks to pass, and merges the PR automatically once all checks are successful
+8. Cursor sets the status to `done` in the development plan
+9. Once the PR is merged, Cursor switches back to main and pulls the latest changes
