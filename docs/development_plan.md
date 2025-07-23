@@ -12,11 +12,11 @@ This document outlines the development plan for the Conductor tool, broken down 
 
 - **1.2. Configuration Loading**
   - 1.2.1 Use Viper to create a `main.go` under `cmd/conductor` that loads the YAML config.
-    - Status: in progress
+    - Status: done
 
 - **1.3. GitHub Client Adapter**
   - 1.3.1 Create an adapter under `internal/adapter` that proxies the GitHub Go client, allowing for interface abstraction and testing.
-    - Status: to do
+    - Status: in progress
   - 1.3.2 Add a test to ensure the adapter can retrieve a file from a repository on GitHub.
     - Status: to do
   - 1.3.3 Add a test to ensure the adapter can retrieve the tags of a repository hosted on GitHub.
