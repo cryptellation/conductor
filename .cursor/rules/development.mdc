@@ -50,6 +50,7 @@
      ```
   8. Merge the PR automatically when all checks are green.
   9. Switch to `main` and pull latest changes after merge.
+- **If any error occurs during these steps, especially if there is an error in the tests, the process must stop immediately and not proceed further.**
 
 ## Example Statuses
 - `to do`: Not started
@@ -62,7 +63,6 @@
 3. Open a PR to `main` and wait for review/CI.
 4. Merge only after all checks are green.
 5. Use the new code in `main`.
-
 6. Cursor prompts the user for review and test confirmation
 7. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
 8. Cursor creates a pull request, waits for all required checks to pass and merges the PR automatically, or merges immediately if there are no checks

@@ -20,13 +20,13 @@ import (
 
 type Conductor struct{}
 
-// IntegrationTests runs all Go tests in internal/adapters/.
+// IntegrationTests runs all Go tests in pkg/adapters/.
 func (m *Conductor) IntegrationTests(sourceDir *dagger.Directory, githubToken *dagger.Secret) *dagger.Container {
 	c := dag.Container().From("golang:1.24")
 	c = c.WithMountedDirectory("/src", sourceDir).
 		WithWorkdir("/src")
 	c = c.WithSecretVariable("GITHUB_TOKEN", githubToken)
-	return c.WithExec([]string{"go", "test", "./internal/adapters/...", "-v"})
+	return c.WithExec([]string{"go", "test", "./pkg/adapters/...", "-v"})
 }
 
 // Lint runs golangci-lint on the main repo (./...) only.

@@ -22,10 +22,10 @@ This document outlines the development plan for the Conductor tool, broken down 
   - 1.3.3 Add a test to ensure the adapter can retrieve the tags of a repository hosted on GitHub.
     - Status: done
   - 1.3.4 Add the tests to a Dagger module (under .dagger), a CI/CD framework, to execute those tests.
-    - Status: to do
+    - Status: done
 
 - **1.4. Repository Discovery**
-  - 1.4.1 Use the configuration and the adapter to get the content of the configured repositories (no automatic discovery).
+  - 1.4.1 Use the configuration and the adapter to get the content of the configured repositories (no automatic discovery). The business logic should be written in `internal/core`, should use the Github adapter (via interface with dependency injection) and be used by the command in `cmd/conductor`. Use Uber gomock to mock the Github adapter.
     - Status: to do
 
 - **1.5. Version Detection**
