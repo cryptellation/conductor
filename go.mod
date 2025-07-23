@@ -3,7 +3,6 @@ module github.com/lerenn/conductor
 go 1.23.8
 
 require (
-	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v55 v55.0.0
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0

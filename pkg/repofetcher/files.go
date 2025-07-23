@@ -2,42 +2,43 @@ package repofetcher
 
 import (
 	"context"
+	"errors"
 
 	"github.com/lerenn/conductor/pkg/adapters/github"
-	"github.com/lerenn/conductor/pkg/config"
 )
 
-// RepositoryContentFetcher fetches content from configured repositories using the GitHub adapter.
-type RepositoryContentFetcher struct {
+// RepositoryFilesFetcher fetches content from configured repositories using the GitHub adapter.
+type RepositoryFilesFetcher struct {
 	client github.Client
 }
 
-func NewRepositoryContentFetcher(client github.Client) *RepositoryContentFetcher {
-	return &RepositoryContentFetcher{client: client}
+func NewRepositoryFilesFetcher(client github.Client) *RepositoryFilesFetcher {
+	return &RepositoryFilesFetcher{client: client}
 }
 
-// FetchAllRepositoriesContent fetches the content of a given file (e.g., README.md) from all configured repositories.
-// The 'path' and 'ref' parameters specify which file and ref to fetch (e.g., "README.md", "main").
-func (f *RepositoryContentFetcher) FetchAllRepositoriesContent(
+// FetchRepositoryFiles fetches the content of the given files from the specified repository URL and ref.
+func (f *RepositoryFilesFetcher) FetchRepositoryFiles(
 	ctx context.Context,
-	cfg *config.Config,
-	path, ref string,
+	repoURL, ref string,
+	files ...string,
 ) (map[string][]byte, error) {
+	owner, name := parseOwnerAndRepo(repoURL)
+	if owner == "" || name == "" {
+		return nil, ErrInvalidRepoURL
+	}
 	results := make(map[string][]byte)
-	for _, repo := range cfg.Repositories {
-		owner, name := parseOwnerAndRepo(repo.URL)
-		if owner == "" || name == "" {
-			continue // skip invalid URLs
-		}
-		content, err := f.client.GetFileContent(ctx, owner, name, path, ref)
+	for _, file := range files {
+		content, err := f.client.GetFileContent(ctx, owner, name, file, ref)
 		if err != nil {
-			results[repo.Name] = nil // or handle error differently
-			continue
+			return nil, err
 		}
-		results[repo.Name] = content
+		results[file] = content
 	}
 	return results, nil
 }
+
+// ErrInvalidRepoURL is returned when the repository URL cannot be parsed.
+var ErrInvalidRepoURL = errors.New("invalid repository URL")
 
 // parseOwnerAndRepo extracts the owner and repo name from a GitHub URL.
 func parseOwnerAndRepo(url string) (owner, repo string) {

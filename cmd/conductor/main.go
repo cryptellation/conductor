@@ -19,14 +19,18 @@ func main() {
 
 	token := "" // TODO: load from env or config
 	client := githubadapter.New(token)
-	fetcher := repofetcher.NewRepositoryContentFetcher(client)
+	fetcher := repofetcher.NewRepositoryFilesFetcher(client)
 
 	ctx := context.Background()
-	results, err := fetcher.FetchAllRepositoriesContent(ctx, cfg, "README.md", "main")
-	if err != nil {
-		log.Fatalf("Error fetching repository content: %v", err)
+	if len(cfg.Repositories) == 0 {
+		log.Fatalf("No repositories configured")
 	}
-	for repo, content := range results {
-		fmt.Printf("Repo: %s, Content: %d bytes\n", repo, len(content))
+	repo := cfg.Repositories[0]
+	results, err := fetcher.FetchRepositoryFiles(ctx, repo.URL, "main", "README.md", "LICENSE")
+	if err != nil {
+		log.Fatalf("Error fetching repository files: %v", err)
+	}
+	for file, content := range results {
+		fmt.Printf("File: %s, Content: %d bytes\n", file, len(content))
 	}
 }

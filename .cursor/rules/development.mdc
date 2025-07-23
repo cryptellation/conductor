@@ -21,19 +21,23 @@
 
 # Development Workflow Rules
 
+## Feature Development Phase
+- **First Phase**: Develop the feature, write tests, and ensure code quality
+- Run local tests and linting during development
+- Set subtask status to `in progress` when starting development
+- Only proceed to shipping phase when user explicitly approves (e.g., "ship it", "ready to ship", etc.)
+
 ## Branching & PRs
 - Never push directly to `main`.
 - All changes must be on a feature/fix branch (`feat-`, `fix-`, or `BREAKING-CHANGE-` prefix).
 - Always create a pull request (PR) for changes. Merge only after review and all CI checks pass.
 
 ## Status Tracking
-- Set the subtask status to `in progress` at the start, and to `done` right before committing (after confirming all relevant changes are staged).
+- Set the subtask status to `in progress` at the start of development
+- Set status to `done` right before committing (after confirming all relevant changes are staged).
 
-## Commit & Review
-- Commit all work to the feature/fix branch.
-- Prompt the user for review when implementation is complete.
-
-## Automated Post-Review Steps
+## Automated Post-Review Steps (Only After User Approval)
+- **Trigger**: Only run these steps when user explicitly says "ship it", "ready to ship", or similar approval
 - After user approval, perform these steps automatically (no user intervention unless errors/input needed):
   1. Run Dagger linter (if required by `.github/workflows/ci.yaml`) and automatically fix error until the dagger linter passes.
   2. Run Dagger tests (if required by `.github/workflows/ci.yaml`).
@@ -57,12 +61,10 @@
 - `in progress`: Task is being worked on
 - `done`: Task is completed, reviewed, and approved by a human (set just before commit).
 
-## Example Workflow
-1. Edit code on a feature/fix branch.
-2. Run `dagger develop` if Dagger module changed.
-3. PR is created and checks/merge are handled automatically.
-4. Use the new code in `main`.
-5. Cursor prompts the user for review and test confirmation only if an error occurs.
-6. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
-7. Cursor creates a pull request, waits for all required checks to pass and merges the PR automatically, or merges immediately if there are no checks
-8. Once the PR is merged, Cursor switches back to main and pulls the latest changes
+## Complete Development Workflow
+1. **Development Phase**: Edit code on a feature/fix branch, write tests, ensure quality
+2. **User Approval**: Wait for user to explicitly approve shipping (e.g., "ship it")
+3. **Automated Shipping**: Run `dagger develop` if Dagger module changed, then execute all post-review steps
+4. **Result**: Code is merged to `main` and ready for use
+5. **Error Handling**: Cursor prompts the user for review and test confirmation only if an error occurs during shipping
+6. **Automatic Process**: After user approval, Cursor handles the entire shipping process automatically
