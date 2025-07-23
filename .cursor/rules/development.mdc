@@ -1,113 +1,67 @@
----
-description:
-globs:
-alwaysApply: true
----
 
-# Environment Variable and GitHub CLI Usage Rule
+# Environment & GitHub CLI Rules
 
-## .env Loading for Tests
-- Before running any tests (locally or in CI), always ensure that environment variables from a `.env` file (but not example env files) are loaded into the environment.
-- Use a tool like `direnv`, `dotenv`, or a shell command to source the `.env` file before test execution.
-- If a test requires a specific variable (e.g., `GITHUB_TOKEN`), document this in the test or README.
-- Example (shell):
+## .env for Tests
+- Always load environment variables from `.env` (not example files) before running tests, locally or in CI.
+- Use `direnv`, `dotenv`, or a shell command to source `.env`.
+- Document required variables (e.g., `GITHUB_TOKEN`) in tests or README.
+- Tests must skip gracefully if required variables are missing (see `internal/adapters/github/client_test.go`).
+- Example:
   ```sh
-  export $(grep -v '^#' example.env | xargs) && go test ./...
+  export $(grep -v '^#' .env | xargs) && go test ./...
   ```
-- Tests that depend on environment variables must skip gracefully if the required variable is not set (see integration test pattern in `internal/adapters/github/client_test.go`).
 
-## GitHub CLI (gh) Usage
-- When using the GitHub CLI (`gh`), ensure that the `GITHUB_TOKEN` environment variable is **not** set in the environment.
-- If `GITHUB_TOKEN` is set, prefer using the Go client or API directly for authentication.
-- Only use `gh` for operations that do not require a `GITHUB_TOKEN`, or after unsetting it:
+## GitHub CLI Usage
+- Unset `GITHUB_TOKEN` before using `gh` CLI:
   ```sh
   unset GITHUB_TOKEN && gh <command>
   ```
-- Document in scripts or README when and why `gh` is used instead of the Go client or direct API calls.
+- If `GITHUB_TOKEN` is set, use the Go client or API directly.
+- Document in scripts/README when and why `gh` is used instead of the Go client or API.
 
 ---
 
-# Development Plan & Feature Branch Workflow Rule
+# Development Workflow Rules
 
-## Branch and PR Enforcement
-- **Never push directly to `main`.** All code changes (including Dagger module changes) must be made on a feature or fix branch (e.g., `feat/ci-dagger`, `fix/dagger-lint`).
-- **Always create a pull request (PR)** for all changes. Merge only after review and all CI checks pass.
+## Branching & PRs
+- Never push directly to `main`.
+- All changes must be on a feature/fix branch (`feat-`, `fix-`, or `BREAKING-CHANGE-` prefix).
+- Always create a pull request (PR) for changes. Merge only after review and all CI checks pass.
 
-## Status Update
-- Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
+## Status Tracking
+- Set the subtask status to `in progress` at the start, and to `done` right before committing (after confirming all relevant changes are staged).
 
-## Development
-- All work for the feature or subtask should be done on the current branch until ready to commit.
+## Commit & Review
+- Commit all work to the feature/fix branch.
+- Prompt the user for review when implementation is complete.
+- Status remains `done` until user review and all tests are green.
 
-## Branch Creation (Before Commit)
-- Just before committing the changes for a new feature or subtask, Cursor must:
-    - Create a new git branch. The branch name should be descriptive of the feature or task. Branch prefix should be "BREAKING-CHANGE-", "feat-", or "fix-".
-    - Set the status in the development plan to `done` right before committing the code.
-    - Check for any non-added (unstaged/untracked) code in Git. Cursor must confirm that any such code is irrelevant to the current changes. If it is relevant, it must be added before committing to avoid forgetting code.
+## Automated Post-Review Steps
+- After user approval, perform these steps automatically (no user intervention unless errors/input needed):
+  1. Run Dagger tests (if required by `.github/workflows/ci.yaml`).
+  2. Create a branch (if not already on one).
+  3. Commit all changes.
+  4. Push to GitHub.
+  5. Create a PR.
+  6. Wait for PR checks to pass using:
+     ```sh
+     gh pr checks <pr-number> --watch
+     ```
+  7. Merge the PR automatically when all checks are green.
+  8. Switch to `main` and pull latest changes after merge.
 
-## Committing
-- All work for the feature or subtask must be committed to the new branch.
-
-## Completion & Review
-- When the implementation is complete, Cursor must prompt the user for review.
-- The status must remain `done` until the user has reviewed the feature and confirmed that all tests are green.
-
-## Final Status
-- Only after user approval, run the dagger functions based on `.github/workflows/ci.yaml`.
-
-## Pushing & Pull Request
-- After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub, create a pull request, and:
-    - Wait for all required checks to pass and merge the PR automatically once all checks are successful, **or**
-    - If there are no checks, merge the PR immediately.
-
-## Go back on main and update
-- Once the user indicates that the PR has been merged or Cursor merged it successfully, Cursor must go back to main and git pull.
-
----
-**Example Workflow:**
-1. Edit code (including `.dagger/main.go` for Dagger changes) on a feature/fix branch (never on `main`).
-2. Run `dagger develop` in the project root if Dagger module was changed.
-3. Open a pull request (PR) to `main` and wait for review and CI to pass.
-4. Merge the PR only after all checks are green.
-5. Use the new function or code in the main branch.
-
-## Statuses
+## Example Statuses
 - `to do`: Not started
 - `in progress`: Task is being worked on
-- `done`: Task is completed, reviewed, and approved by a human. **This status must be set right before committing the code, after confirming all relevant changes are staged.**
+- `done`: Task is completed, reviewed, and approved by a human (set just before commit).
 
-## Example
+## Example Workflow
+1. Edit code on a feature/fix branch.
+2. Run `dagger develop` if Dagger module changed.
+3. Open a PR to `main` and wait for review/CI.
+4. Merge only after all checks are green.
+5. Use the new code in `main`.
 
-Before:
-```markdown
-- 1.1.1 Specify how repositories, services, and libraries are listed in a YAML configuration file.
-  - Status:
-```
-
-After starting work:
-```markdown
-- 1.1.1 Specify how repositories, services, and libraries are listed in a YAML configuration file.
-  - Status: in progress
-```
-
-Right before committing the code (after confirming all relevant changes are staged):
-```markdown
-- 1.1.1 Specify how repositories, services, and libraries are listed in a YAML configuration file.
-  - Status: done
-```
-
----
-
-## Branch Workflow Example
-
-1. User requests: "Implement feature X."
-2. Cursor sets the status to `in progress` in the development plan
-3. Cursor implements the feature on the current branch
-4. Just before committing, Cursor:
-    - Creates a branch: `feat/x-implementation` (or with the appropriate prefix: "BREAKING-CHANGE-", "feat-", or "fix-" and optional scope in brackets, e.g., `fix(cmd)-x-implementation`)
-    - Sets the status to `done` in the development plan
-    - Checks for any non-added code and confirms it is irrelevant, or adds it if relevant
-5. Cursor commits all changes to the new branch using commit messages with the required prefix and optional scope (e.g., `feat(cmd): add X implementation`)
 6. Cursor prompts the user for review and test confirmation
 7. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
 8. Cursor creates a pull request, waits for all required checks to pass and merges the PR automatically, or merges immediately if there are no checks
