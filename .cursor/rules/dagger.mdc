@@ -35,4 +35,14 @@ This rule centralizes all Dagger CI-related requirements and best practices for 
 **Example Workflow:**
 1. Edit `.dagger/main.go` to add a new pipeline function.
 2. Run `dagger develop` in the project root.
+3. **Before running integration tests with Dagger, export environment variables from `.env`:**
+   ```sh
+   export $(cat .env | xargs)
+   dagger call integration-tests --source-dir . --github-token env:GITHUB_TOKEN
+   ```
+4. Use the new function via the Dagger CLI or in CI/CD.
+
+**Example Workflow:**
+1. Edit `.dagger/main.go` to add a new pipeline function.
+2. Run `dagger develop` in the project root.
 3. Use the new function via the Dagger CLI or in CI/CD.

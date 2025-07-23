@@ -12,12 +12,10 @@
   ```
 
 ## GitHub CLI Usage
-- Unset `GITHUB_TOKEN` before using `gh` CLI:
+- you should ALWAYS unset `GITHUB_TOKEN` before using `gh` CLI:
   ```sh
   unset GITHUB_TOKEN && gh <command>
   ```
-- If `GITHUB_TOKEN` is set, use the Go client or API directly.
-- Document in scripts/README when and why `gh` is used instead of the Go client or API.
 
 ---
 
@@ -34,22 +32,25 @@
 ## Commit & Review
 - Commit all work to the feature/fix branch.
 - Prompt the user for review when implementation is complete.
-- Status remains `done` until user review and all tests are green.
 
 ## Automated Post-Review Steps
 - After user approval, perform these steps automatically (no user intervention unless errors/input needed):
-  1. Run Dagger tests (if required by `.github/workflows/ci.yaml`).
-  2. Create a branch (if not already on one).
-  3. Commit all changes.
-  4. Push to GitHub.
-  5. Create a PR.
-  6. **Wait at least 10 seconds after PR creation before running PR checks** to ensure all checks have started.
-  7. Wait for PR checks to pass using:
+  1. Run Dagger linter (if required by `.github/workflows/ci.yaml`) and automatically fix error until the dagger linter passes.
+  2. Run Dagger tests (if required by `.github/workflows/ci.yaml`).
+  3. Put status to `done` when all tests and linter are green.
+  4. Create a branch (if not already on one).
+  5. Commit all changes.
+  6. Push to GitHub.
+  7. Automatically create a PR to `main`.
+  8. **Wait at least 10 seconds after PR creation before running PR checks** to ensure all checks have started.
+  9. Wait for PR checks to pass using:
      ```sh
      gh pr checks <pr-number> --watch
      ```
-  8. Merge the PR automatically when all checks are green.
-  9. Switch to `main` and pull latest changes after merge.
+  10. Merge the PR automatically when all checks are green.
+  11. Switch to `main` and pull latest changes after merge.
+- **If any error occurs during these steps, especially if there is an error in the tests or linter, the process must stop immediately and not proceed further.**
+- The user should not be prompted to manually create a PR, monitor checks, or merge; these steps are handled automatically unless an error occurs.
 
 ## Example Statuses
 - `to do`: Not started
@@ -59,11 +60,9 @@
 ## Example Workflow
 1. Edit code on a feature/fix branch.
 2. Run `dagger develop` if Dagger module changed.
-3. Open a PR to `main` and wait for review/CI.
-4. Merge only after all checks are green.
-5. Use the new code in `main`.
-
-6. Cursor prompts the user for review and test confirmation
-7. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
-8. Cursor creates a pull request, waits for all required checks to pass and merges the PR automatically, or merges immediately if there are no checks
-9. Once the PR is merged, Cursor switches back to main and pulls the latest changes
+3. PR is created and checks/merge are handled automatically.
+4. Use the new code in `main`.
+5. Cursor prompts the user for review and test confirmation only if an error occurs.
+6. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
+7. Cursor creates a pull request, waits for all required checks to pass and merges the PR automatically, or merges immediately if there are no checks
+8. Once the PR is merged, Cursor switches back to main and pulls the latest changes
