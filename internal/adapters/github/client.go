@@ -27,7 +27,10 @@ func New(token string) Client {
 
 // GetFileContent retrieves the content of a file from a GitHub repository.
 func (c *client) GetFileContent(ctx context.Context, owner, repo, path, ref string) ([]byte, error) {
-	fileContent, _, _, err := c.gh.Repositories.GetContents(ctx, owner, repo, path, &github.RepositoryContentGetOptions{Ref: ref})
+	fileContent, _, _, err := c.gh.Repositories.GetContents(
+		ctx, owner, repo, path,
+		&github.RepositoryContentGetOptions{Ref: ref},
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,38 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# Dagger CI Rule (`dagger.mdc`)
+
+This rule centralizes all Dagger CI-related requirements and best practices for this project.
+
+## 1. Dagger Module Regeneration
+- **After any modification to the Dagger module** (e.g., `.dagger/main.go`, `.dagger/go.mod`, `.dagger/go.sum`, or any file in `.dagger/` that affects the module's API or behavior), you **must** run:
+  ```sh
+  dagger develop
+  ```
+- This ensures that the generated code and CLI interface are up to date and that new/changed functions are available to the Dagger CLI and SDKs.
+- Failing to do so may result in missing or outdated functions when running Dagger commands.
+
+## 2. Dagger CI Best Practices
+- Keep all Dagger module logic in `.dagger/`.
+- Use clear, descriptive function names for Dagger module exports.
+- Document any required environment variables or secrets for CI/CD in this rule or in `.dagger/README.md`.
+- Prefer mounting only the necessary directories/files for each pipeline step to optimize caching and security.
+- Use Dagger caches (e.g., `dag.CacheVolume(...)`) for dependencies and build artifacts to speed up CI runs.
+- If you add or change Dagger module dependencies, always run `go mod tidy` in `.dagger/` before `dagger develop`.
+
+## 3. Dagger Versioning
+- Keep the Dagger CLI and Go SDK versions in sync with the project's requirements.
+- If upgrading Dagger, test all pipelines and update this rule with any new best practices or breaking changes.
+
+## 4. Centralization
+- All Dagger-related CI rules, conventions, and best practices should be added to this file (`dagger.mdc`) for easy reference and enforcement.
+
+---
+**Example Workflow:**
+1. Edit `.dagger/main.go` to add a new pipeline function.
+2. Run `dagger develop` in the project root.
+3. Use the new function via the Dagger CLI or in CI/CD.
