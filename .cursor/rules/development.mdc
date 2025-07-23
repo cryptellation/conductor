@@ -5,12 +5,15 @@ When the AI is asked to perform a task from the development plan (e.g., in `docs
 
 1. **Status Update**: Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
 2. **Development**: All work for the feature or subtask should be done on the current branch until ready to commit.
-3. **Branch Creation (Before Commit)**: Just before committing the changes for a new feature or subtask, Cursor must create a new git branch. The branch name should be descriptive of the feature or task. Branch prefix should be "BREAKING-CHANGE-", "feat-", or "fix-".
+3. **Branch Creation (Before Commit)**: Just before committing the changes for a new feature or subtask, Cursor must:
+    - Create a new git branch. The branch name should be descriptive of the feature or task. Branch prefix should be "BREAKING-CHANGE-", "feat-", or "fix-".
+    - Set the status in the development plan to `done` right before committing the code.
+    - Check for any non-added (unstaged/untracked) code in Git. Cursor must confirm that any such code is irrelevant to the current changes. If it is relevant, it must be added before committing to avoid forgetting code.
 4. **Committing**: All work for the feature or subtask must be committed to the new branch.
 5. **Completion & Review**:
     - When the implementation is complete, Cursor must prompt the user for review.
-    - The status must remain `in progress` until the user has reviewed the feature and confirmed that all tests are green.
-6. **Final Status**: Only after user approval and successful test results, Cursor may update the status to `done`.
+    - The status must remain `done` until the user has reviewed the feature and confirmed that all tests are green.
+6. **Final Status**: Only after user approval and successful test results, the code is considered shipped (PR merged and main updated).
 7. **Pushing & Pull Request**: After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub, create a pull request, and:
     - Wait for all required checks to pass and merge the PR automatically once all checks are successful, **or**
     - If there are no checks, merge the PR immediately.
@@ -19,7 +22,7 @@ When the AI is asked to perform a task from the development plan (e.g., in `docs
 ## Statuses
 - `to do`: Not started
 - `in progress`: Task is being worked on
-- `done`: Task is completed, reviewed, and approved by a human
+- `done`: Task is completed, reviewed, and approved by a human. **This status must be set right before committing the code, after confirming all relevant changes are staged.**
 
 ## Example
 
@@ -35,7 +38,7 @@ After starting work:
   - Status: in progress
 ```
 
-After user review/approval and all tests are green:
+Right before committing the code (after confirming all relevant changes are staged):
 ```markdown
 - 1.1.1 Specify how repositories, services, and libraries are listed in a YAML configuration file.
   - Status: done
@@ -48,10 +51,12 @@ After user review/approval and all tests are green:
 1. User requests: "Implement feature X."
 2. Cursor sets the status to `in progress` in the development plan
 3. Cursor implements the feature on the current branch
-4. Just before committing, Cursor creates a branch: `feat/x-implementation` (or with the appropriate prefix: "BREAKING-CHANGE-", "feat-", or "fix-" and optional scope in brackets, e.g., `fix(cmd)-x-implementation`)
+4. Just before committing, Cursor:
+    - Creates a branch: `feat/x-implementation` (or with the appropriate prefix: "BREAKING-CHANGE-", "feat-", or "fix-" and optional scope in brackets, e.g., `fix(cmd)-x-implementation`)
+    - Sets the status to `done` in the development plan
+    - Checks for any non-added code and confirms it is irrelevant, or adds it if relevant
 5. Cursor commits all changes to the new branch using commit messages with the required prefix and optional scope (e.g., `feat(cmd): add X implementation`)
 6. Cursor prompts the user for review and test confirmation
 7. After user approval and confirmation that all tests pass, Cursor pushes the new branch to GitHub
 8. Cursor creates a pull request, waits for all required checks to pass and merges the PR automatically, or merges immediately if there are no checks
-9. Cursor sets the status to `done` in the development plan
-10. Once the PR is merged, Cursor switches back to main and pulls the latest changes
+9. Once the PR is merged, Cursor switches back to main and pulls the latest changes
