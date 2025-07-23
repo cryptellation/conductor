@@ -43,12 +43,13 @@
   3. Commit all changes.
   4. Push to GitHub.
   5. Create a PR.
-  6. Wait for PR checks to pass using:
+  6. **Wait at least 10 seconds after PR creation before running PR checks** to ensure all checks have started.
+  7. Wait for PR checks to pass using:
      ```sh
      gh pr checks <pr-number> --watch
      ```
-  7. Merge the PR automatically when all checks are green.
-  8. Switch to `main` and pull latest changes after merge.
+  8. Merge the PR automatically when all checks are green.
+  9. Switch to `main` and pull latest changes after merge.
 
 ## Example Statuses
 - `to do`: Not started
