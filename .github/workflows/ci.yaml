@@ -11,6 +11,7 @@ on:
 jobs:
   lint:
     name: Run linter
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -23,6 +24,7 @@ jobs:
 
   lint-dagger:
     name: Lint Dagger module
+    if: github.event_name == 'pull_request'
     needs: [lint]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -36,6 +38,7 @@ jobs:
 
   integration-tests:
     name: Run integration tests
+    if: github.event_name == 'pull_request'
     needs: [lint, lint-dagger]
     runs-on: ubuntu-latest
     timeout-minutes: 15

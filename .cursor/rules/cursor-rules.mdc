@@ -1,3 +1,9 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
 # Cursor Rules Location
 
 How to add new cursor rules to the project
@@ -63,9 +69,6 @@ function badExample() {
 ```
 
 **Be sure that the header is present and correct when you finish a new rule. Never delete or omit the header.**
-```
-
-Be sure that the header is correct when you finish a new rule.
 
 ---
 
@@ -73,33 +76,27 @@ Be sure that the header is correct when you finish a new rule.
 
 **Automated or manual header checks are required for all rule files in `.cursor/rules/`.**
 
-- Every rule file must start with a header containing at least:
+- **Every rule file in `.cursor/rules/` must always start with a header** containing at least:
+  - `---`
   - `description:`
   - `globs:`
   - `alwaysApply:`
+- **The header must never be deleted or omitted.**
 - The header must be at the very top of the file, before any other content.
+- If you add or modify a rule file, you must ensure the header is present and correct.
 - PRs or commits that add or modify rule files **must be blocked or flagged** if the header is missing or malformed.
+- Manual and AI review is required for header correctness and completeness.
 
-### Example: Pre-commit Hook (Bash)
-
-Add this to `.git/hooks/pre-commit` to block commits with missing headers:
-
-```bash
-#!/bin/bash
-for file in $(git diff --cached --name-only | grep '^.cursor/rules/.*\.mdc$'); do
-  if ! grep -q '^---' "$file" || ! grep -q '^description:' "$file" || ! grep -q '^globs:' "$file" || ! grep -q '^alwaysApply:' "$file"; then
-    echo "[ERROR] $file is missing a required header (---, description, globs, alwaysApply)."
-    exit 1
-  fi
-done
+**Example header:**
+```markdown
+---
+description: Short description of the rule's purpose
+globs: optional/path/pattern/**/*
+alwaysApply: false
+---
 ```
 
-- Make the hook executable: `chmod +x .git/hooks/pre-commit`
-- This will prevent commits if any rule file is missing the required header fields.
-
-**Manual review is also encouraged for header correctness and completeness.**
-  // Implementation not following guidelines
-}
+**Never delete or omit the header from any rule file.**
 ```
 
 Be sure that the header is correct when you finish a new rule.

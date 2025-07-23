@@ -1,3 +1,8 @@
+---
+description:
+globs:
+alwaysApply: true
+---
 
 # Environment Variable and GitHub CLI Usage Rule
 
@@ -24,23 +29,47 @@
 
 # Development Plan & Feature Branch Workflow Rule
 
-When the AI is asked to perform a task from the development plan (e.g., in `docs/development_plan.md`) or to implement a new feature:
+## Branch and PR Enforcement
+- **Never push directly to `main`.** All code changes (including Dagger module changes) must be made on a feature or fix branch (e.g., `feat/ci-dagger`, `fix/dagger-lint`).
+- **Always create a pull request (PR)** for all changes. Merge only after review and all CI checks pass.
 
-1. **Status Update**: Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
-2. **Development**: All work for the feature or subtask should be done on the current branch until ready to commit.
-3. **Branch Creation (Before Commit)**: Just before committing the changes for a new feature or subtask, Cursor must:
+## Status Update
+- Cursor must update the status line for the relevant subtask to `in progress` at the start of the process.
+
+## Development
+- All work for the feature or subtask should be done on the current branch until ready to commit.
+
+## Branch Creation (Before Commit)
+- Just before committing the changes for a new feature or subtask, Cursor must:
     - Create a new git branch. The branch name should be descriptive of the feature or task. Branch prefix should be "BREAKING-CHANGE-", "feat-", or "fix-".
     - Set the status in the development plan to `done` right before committing the code.
     - Check for any non-added (unstaged/untracked) code in Git. Cursor must confirm that any such code is irrelevant to the current changes. If it is relevant, it must be added before committing to avoid forgetting code.
-4. **Committing**: All work for the feature or subtask must be committed to the new branch.
-5. **Completion & Review**:
-    - When the implementation is complete, Cursor must prompt the user for review.
-    - The status must remain `done` until the user has reviewed the feature and confirmed that all tests are green.
-6. **Final Status**: Only after user approval, run the dagger functions based on `.github/workflows/ci.yaml`.
-7. **Pushing & Pull Request**: After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub, create a pull request, and:
+
+## Committing
+- All work for the feature or subtask must be committed to the new branch.
+
+## Completion & Review
+- When the implementation is complete, Cursor must prompt the user for review.
+- The status must remain `done` until the user has reviewed the feature and confirmed that all tests are green.
+
+## Final Status
+- Only after user approval, run the dagger functions based on `.github/workflows/ci.yaml`.
+
+## Pushing & Pull Request
+- After user approval and confirmation that all tests pass, Cursor must push the new branch to GitHub, create a pull request, and:
     - Wait for all required checks to pass and merge the PR automatically once all checks are successful, **or**
     - If there are no checks, merge the PR immediately.
-8. **Go back on main and update**: Once the user indicates that the PR has been merged or Cursor merged it successfully, Cursor must go back to main and git pull.
+
+## Go back on main and update
+- Once the user indicates that the PR has been merged or Cursor merged it successfully, Cursor must go back to main and git pull.
+
+---
+**Example Workflow:**
+1. Edit code (including `.dagger/main.go` for Dagger changes) on a feature/fix branch (never on `main`).
+2. Run `dagger develop` in the project root if Dagger module was changed.
+3. Open a pull request (PR) to `main` and wait for review and CI to pass.
+4. Merge the PR only after all checks are green.
+5. Use the new function or code in the main branch.
 
 ## Statuses
 - `to do`: Not started
