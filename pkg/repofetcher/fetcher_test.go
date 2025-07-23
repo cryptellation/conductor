@@ -10,14 +10,12 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -source=../adapters/github/client.go -destination=../adapters/github/mock_client.go -package=github
-
 func TestFetchRepositoryFiles(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
 	mockClient := github.NewMockClient(ctrl)
-	fetcher := NewRepositoryFilesFetcher(mockClient)
+	fetcher := New(mockClient)
 
 	repoURL := "https://github.com/owner1/repo1.git"
 	ctx := context.Background()
@@ -37,7 +35,7 @@ func TestFetchRepositoryFiles_InvalidURL(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockClient := github.NewMockClient(ctrl)
-	fetcher := NewRepositoryFilesFetcher(mockClient)
+	fetcher := New(mockClient)
 
 	ctx := context.Background()
 	_, err := fetcher.FetchRepositoryFiles(ctx, "invalid-url", "main", "README.md")
@@ -49,7 +47,7 @@ func TestFetchRepositoryFiles_ErrorOnFile(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockClient := github.NewMockClient(ctrl)
-	fetcher := NewRepositoryFilesFetcher(mockClient)
+	fetcher := New(mockClient)
 
 	repoURL := "https://github.com/owner1/repo1.git"
 	ctx := context.Background()

@@ -7,17 +7,27 @@ import (
 	"github.com/lerenn/conductor/pkg/adapters/github"
 )
 
-// RepositoryFilesFetcher fetches content from configured repositories using the GitHub adapter.
-type RepositoryFilesFetcher struct {
+//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -source=fetcher.go -destination=mock.gen.go -package=repofetcher
+
+// Fetcher defines the interface for fetching repository files.
+type Fetcher interface {
+	FetchRepositoryFiles(ctx context.Context, repoURL, ref string, files ...string) (map[string][]byte, error)
+}
+
+// fetcher fetches content from configured repositories using the GitHub adapter.
+type fetcher struct {
 	client github.Client
 }
 
-func NewRepositoryFilesFetcher(client github.Client) *RepositoryFilesFetcher {
-	return &RepositoryFilesFetcher{client: client}
+// Ensure fetcher implements Fetcher.
+var _ Fetcher = (*fetcher)(nil)
+
+func New(client github.Client) Fetcher {
+	return &fetcher{client: client}
 }
 
 // FetchRepositoryFiles fetches the content of the given files from the specified repository URL and ref.
-func (f *RepositoryFilesFetcher) FetchRepositoryFiles(
+func (f *fetcher) FetchRepositoryFiles(
 	ctx context.Context,
 	repoURL, ref string,
 	files ...string,
