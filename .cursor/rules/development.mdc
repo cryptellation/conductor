@@ -23,7 +23,8 @@
 
 ## Feature Development Phase
 - **First Phase**: Develop the feature, write tests, and ensure code quality
-- Run local tests and linting during development
+- **Tests MUST ONLY be executed through Dagger** - never run `go test` directly
+- Run local tests and linting during development using Dagger commands
 - Set subtask status to `in progress` when starting development
 - Only proceed to shipping phase when user explicitly approves (e.g., "ship it", "ready to ship", etc.)
 
@@ -52,7 +53,8 @@
      gh pr checks <pr-number> --watch
      ```
   10. Merge the PR automatically when all checks are green.
-  11. Switch to `main` and pull latest changes after merge.
+  11. Delete the remote branch associated with the PR.
+  12. Switch to `main` and pull latest changes after merge.
 - **If any error occurs during these steps, especially if there is an error in the tests or linter, the process must stop immediately and not proceed further.**
 - The user should not be prompted to manually create a PR, monitor checks, or merge; these steps are handled automatically unless an error occurs.
 
@@ -62,7 +64,7 @@
 - `done`: Task is completed, reviewed, and approved by a human (set just before commit).
 
 ## Complete Development Workflow
-1. **Development Phase**: Edit code on a feature/fix branch, write tests, ensure quality
+1. **Development Phase**: Edit code on a feature/fix branch, write tests, ensure quality (using Dagger for all test execution)
 2. **User Approval**: Wait for user to explicitly approve shipping (e.g., "ship it")
 3. **Automated Shipping**: Run `dagger develop` if Dagger module changed, then execute all post-review steps
 4. **Result**: Code is merged to `main` and ready for use
