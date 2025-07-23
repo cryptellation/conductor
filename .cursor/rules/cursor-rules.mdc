@@ -1,8 +1,3 @@
----
-description: How to add or edit Cursor rules in our project
-globs:
-alwaysApply: false
----
 # Cursor Rules Location
 
 How to add new cursor rules to the project
@@ -15,12 +10,14 @@ How to add new cursor rules to the project
     └── ...
     ```
 
-2. Follow the naming convention:
+2. **Always include the header at the top of every rule file.** The header must contain at least the following fields: `description`, `globs`, and `alwaysApply`. The header must never be deleted or omitted from any rule file.
+
+3. Follow the naming convention:
     - Use kebab-case for filenames
     - Always use .mdc extension
     - Make names descriptive of the rule's purpose
 
-3. Directory structure:
+4. Directory structure:
     ```
     PROJECT_ROOT/
     ├── .cursor/
@@ -30,12 +27,12 @@ How to add new cursor rules to the project
     └── ...
     ```
 
-4. Never place rule files:
+5. Never place rule files:
     - In the project root
     - In subdirectories outside .cursor/rules
     - In any other location
 
-5. Cursor rules have the following structure:
+6. Cursor rules have the following structure:
 
 ```
 ---
@@ -61,6 +58,46 @@ function goodExample() {
 
 // Bad example
 function badExample() {
+  // Implementation not following guidelines
+}
+```
+
+**Be sure that the header is present and correct when you finish a new rule. Never delete or omit the header.**
+```
+
+Be sure that the header is correct when you finish a new rule.
+
+---
+
+## Header Enforcement
+
+**Automated or manual header checks are required for all rule files in `.cursor/rules/`.**
+
+- Every rule file must start with a header containing at least:
+  - `description:`
+  - `globs:`
+  - `alwaysApply:`
+- The header must be at the very top of the file, before any other content.
+- PRs or commits that add or modify rule files **must be blocked or flagged** if the header is missing or malformed.
+
+### Example: Pre-commit Hook (Bash)
+
+Add this to `.git/hooks/pre-commit` to block commits with missing headers:
+
+```bash
+#!/bin/bash
+for file in $(git diff --cached --name-only | grep '^.cursor/rules/.*\.mdc$'); do
+  if ! grep -q '^---' "$file" || ! grep -q '^description:' "$file" || ! grep -q '^globs:' "$file" || ! grep -q '^alwaysApply:' "$file"; then
+    echo "[ERROR] $file is missing a required header (---, description, globs, alwaysApply)."
+    exit 1
+  fi
+done
+```
+
+- Make the hook executable: `chmod +x .git/hooks/pre-commit`
+- This will prevent commits if any rule file is missing the required header fields.
+
+**Manual review is also encouraged for header correctness and completeness.**
   // Implementation not following guidelines
 }
 ```
