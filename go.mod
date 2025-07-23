@@ -1,4 +1,4 @@
-module conductor
+module github.com/lerenn/conductor
 
 go 1.23.8
 

@@ -3,8 +3,8 @@ package repofetcher
 import (
 	"context"
 
-	"conductor/pkg/adapters/github"
-	"conductor/pkg/config"
+	"github.com/lerenn/conductor/pkg/adapters/github"
+	"github.com/lerenn/conductor/pkg/config"
 )
 
 // RepositoryContentFetcher fetches content from configured repositories using the GitHub adapter.
@@ -18,7 +18,11 @@ func NewRepositoryContentFetcher(client github.Client) *RepositoryContentFetcher
 
 // FetchAllRepositoriesContent fetches the content of a given file (e.g., README.md) from all configured repositories.
 // The 'path' and 'ref' parameters specify which file and ref to fetch (e.g., "README.md", "main").
-func (f *RepositoryContentFetcher) FetchAllRepositoriesContent(ctx context.Context, cfg *config.Config, path, ref string) (map[string][]byte, error) {
+func (f *RepositoryContentFetcher) FetchAllRepositoriesContent(
+	ctx context.Context,
+	cfg *config.Config,
+	path, ref string,
+) (map[string][]byte, error) {
 	results := make(map[string][]byte)
 	for _, repo := range cfg.Repositories {
 		owner, name := parseOwnerAndRepo(repo.URL)

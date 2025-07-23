@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	githubadapter "conductor/pkg/adapters/github"
-	"conductor/pkg/config"
-	"conductor/pkg/repofetcher"
+	githubadapter "github.com/lerenn/conductor/pkg/adapters/github"
+	"github.com/lerenn/conductor/pkg/config"
+	"github.com/lerenn/conductor/pkg/repofetcher"
 )
 
 func main() {

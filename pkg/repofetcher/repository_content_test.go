@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"conductor/pkg/adapters/github"
-	"conductor/pkg/config"
-
+	"github.com/lerenn/conductor/pkg/adapters/github"
+	"github.com/lerenn/conductor/pkg/config"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
