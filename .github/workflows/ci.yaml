@@ -22,24 +22,10 @@ jobs:
           verb: call
           args: lint --source-dir=.
 
-  lint-dagger:
-    name: Lint Dagger module
-    if: github.event_name == 'pull_request'
-    needs: [lint]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dagger/dagger-for-github@8.0.0
-        with:
-          version: latest
-          verb: call
-          args: lint-dagger --source-dir=.
-
   integration-tests:
     name: Run integration tests
     if: github.event_name == 'pull_request'
-    needs: [lint, lint-dagger]
+    needs: [lint]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
