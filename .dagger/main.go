@@ -20,11 +20,20 @@ import (
 
 type Conductor struct{}
 
+// withGoCodeAndCacheAsWorkDirectory mounts Go caches, source, and sets workdir for tests.
+func withGoCodeAndCacheAsWorkDirectory(c *dagger.Container, sourceDir *dagger.Directory) *dagger.Container {
+	containerPath := "/src"
+	return c.
+		WithMountedCache("/root/.cache/go-build", dag.CacheVolume("gobuild")).
+		WithMountedCache("/go/pkg/mod", dag.CacheVolume("gocache")).
+		WithMountedDirectory(containerPath, sourceDir).
+		WithWorkdir(containerPath)
+}
+
 // IntegrationTests runs all Go tests in pkg/adapters/.
 func (m *Conductor) IntegrationTests(sourceDir *dagger.Directory, githubToken *dagger.Secret) *dagger.Container {
 	c := dag.Container().From("golang:1.24")
-	c = c.WithMountedDirectory("/src", sourceDir).
-		WithWorkdir("/src")
+	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
 	c = c.WithSecretVariable("GITHUB_TOKEN", githubToken)
 	return c.WithExec([]string{"go", "test", "./pkg/adapters/...", "-v"})
 }
@@ -57,4 +66,11 @@ func (m *Conductor) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 	c = c.WithExec([]string{"sh", "-c", "cd .dagger && golangci-lint run --config ../.golangci.yml --timeout 10m ."})
 
 	return c
+}
+
+// UnitTests runs all Go unit tests in pkg/ (excluding adapters/).
+func (m *Conductor) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
+	c := dag.Container().From("golang:1.24")
+	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
+	return c.WithExec([]string{"go", "test", "./pkg/...", "-v"})
 }
