@@ -5,7 +5,8 @@ import (
 	"testing"
 
 	"github.com/lerenn/conductor/pkg/config"
-	"github.com/lerenn/conductor/pkg/repofetcher"
+	"github.com/lerenn/conductor/pkg/depgraph"
+	"github.com/lerenn/conductor/pkg/repofetchers"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -35,7 +36,7 @@ func TestConductor_Run_NoRepositories(t *testing.T) {
 
 	c := New(cfg, "test-token")
 	// Replace the fetcher with a mock for testing
-	c.fetcher = repofetcher.NewMockFetcher(ctrl)
+	c.fetcher = repofetchers.NewMockFetcher(ctrl)
 
 	ctx := context.Background()
 	err := c.Run(ctx)
@@ -58,14 +59,28 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 		"go.mod": []byte("module github.com/test/repo\nrequire github.com/test/dep v1.0.0\n"),
 	}
 
-	mockFetcher := repofetcher.NewMockFetcher(ctrl)
+	mockFetcher := repofetchers.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
 		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(expectedResults, nil)
 
+	mockGraphBuilder := depgraph.NewMockGraphBuilder(ctrl)
+	mockGraph := map[string]*depgraph.Service{
+		"github.com/test/repo": {
+			ModulePath:   "github.com/test/repo",
+			RepoURL:      "https://github.com/test/repo",
+			Dependencies: map[string]*depgraph.Service{},
+		},
+	}
+	mockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
+
+	mockVersionDetector := repofetchers.NewMockVersionDetector(ctrl)
+	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
+
 	c := New(cfg, "test-token")
-	// Replace the fetcher with a mock for testing
 	c.fetcher = mockFetcher
+	c.graphBuilder = mockGraphBuilder
+	c.versionDetector = mockVersionDetector
 
 	ctx := context.Background()
 	err := c.Run(ctx)
@@ -84,7 +99,7 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 		},
 	}
 
-	mockFetcher := repofetcher.NewMockFetcher(ctrl)
+	mockFetcher := repofetchers.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
 		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo1", "main", "go.mod").
 		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo1")}, nil)
@@ -92,8 +107,28 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo2", "main", "go.mod").
 		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo2")}, nil)
 
+	mockGraphBuilder := depgraph.NewMockGraphBuilder(ctrl)
+	mockGraph := map[string]*depgraph.Service{
+		"github.com/test/repo1": {
+			ModulePath:   "github.com/test/repo1",
+			RepoURL:      "https://github.com/test/repo1",
+			Dependencies: map[string]*depgraph.Service{},
+		},
+		"github.com/test/repo2": {
+			ModulePath:   "github.com/test/repo2",
+			RepoURL:      "https://github.com/test/repo2",
+			Dependencies: map[string]*depgraph.Service{},
+		},
+	}
+	mockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
+
+	mockVersionDetector := repofetchers.NewMockVersionDetector(ctrl)
+	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
+
 	c := New(cfg, "test-token")
 	c.fetcher = mockFetcher
+	c.graphBuilder = mockGraphBuilder
+	c.versionDetector = mockVersionDetector
 
 	ctx := context.Background()
 	err := c.Run(ctx)
@@ -111,7 +146,7 @@ func TestConductor_Run_WithRepositories_FetchError(t *testing.T) {
 		},
 	}
 
-	mockFetcher := repofetcher.NewMockFetcher(ctrl)
+	mockFetcher := repofetchers.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
 		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(nil, assert.AnError)

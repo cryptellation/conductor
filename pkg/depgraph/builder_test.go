@@ -16,7 +16,7 @@ require github.com/example/B v1.0.0
 		"github.com/example/A": {RepoURL: "https://github.com/example/A.git", GoModContent: modA},
 		"github.com/example/B": {RepoURL: "https://github.com/example/B.git", GoModContent: modB},
 	}
-	graph, err := BuildGraph(modules)
+	graph, err := NewGraphBuilder().BuildGraph(modules)
 	require.NoError(t, err)
 	require.Len(t, graph, 2)
 	a := graph["github.com/example/A"]
@@ -40,7 +40,7 @@ require github.com/example/C v1.0.0
 		"github.com/example/B": {RepoURL: "https://github.com/example/B.git", GoModContent: modB},
 		"github.com/example/C": {RepoURL: "https://github.com/example/C.git", GoModContent: modC},
 	}
-	graph, err := BuildGraph(modules)
+	graph, err := NewGraphBuilder().BuildGraph(modules)
 	require.NoError(t, err)
 	a := graph["github.com/example/A"]
 	b := graph["github.com/example/B"]
@@ -64,7 +64,7 @@ require github.com/external/X v1.2.3
 		"github.com/example/A": {RepoURL: "https://github.com/example/A.git", GoModContent: modA},
 		"github.com/example/B": {RepoURL: "https://github.com/example/B.git", GoModContent: modB},
 	}
-	graph, err := BuildGraph(modules)
+	graph, err := NewGraphBuilder().BuildGraph(modules)
 	require.NoError(t, err)
 	a := graph["github.com/example/A"]
 	require.NotNil(t, a)

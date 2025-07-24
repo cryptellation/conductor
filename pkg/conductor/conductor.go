@@ -8,26 +8,29 @@ import (
 	"github.com/lerenn/conductor/pkg/adapters/github"
 	"github.com/lerenn/conductor/pkg/config"
 	"github.com/lerenn/conductor/pkg/depgraph"
-	"github.com/lerenn/conductor/pkg/repofetcher"
+	"github.com/lerenn/conductor/pkg/repofetchers"
 	"golang.org/x/mod/modfile"
 )
 
 // Conductor represents the main conductor application that orchestrates
 // repository file fetching and processing.
 type Conductor struct {
-	config  *config.Config
-	client  github.Client
-	fetcher repofetcher.Fetcher
+	config          *config.Config
+	client          github.Client
+	fetcher         repofetchers.FilesFetcher
+	graphBuilder    depgraph.GraphBuilder
+	versionDetector repofetchers.VersionDetector
 }
 
 // New creates a new Conductor instance with the given configuration and GitHub token.
 func New(cfg *config.Config, token string) *Conductor {
 	client := github.New(token)
-	fetcher := repofetcher.New(client)
 	return &Conductor{
-		config:  cfg,
-		client:  client,
-		fetcher: fetcher,
+		config:          cfg,
+		client:          client,
+		fetcher:         repofetchers.NewFilesFetcher(client),
+		graphBuilder:    depgraph.NewGraphBuilder(),
+		versionDetector: repofetchers.NewVersionDetector(),
 	}
 }
 
@@ -42,12 +45,18 @@ func (c *Conductor) Run(ctx context.Context) error {
 		return err
 	}
 
-	graph, err := depgraph.BuildGraph(modules)
+	graph, err := c.graphBuilder.BuildGraph(modules)
 	if err != nil {
 		return fmt.Errorf("failed to build dependency graph: %w", err)
 	}
 
+	err = c.versionDetector.DetectAndSetCurrentVersions(ctx, c.client, graph)
+	if err != nil {
+		return fmt.Errorf("failed to detect versions: %w", err)
+	}
+
 	c.printDependencyGraph(graph)
+	c.printCurrentVersions(graph)
 	return nil
 }
 
@@ -56,7 +65,7 @@ func (c *Conductor) fetchModules(ctx context.Context) (map[string]depgraph.RepoM
 	modules := make(map[string]depgraph.RepoModule)
 	for _, repo := range c.config.Repositories {
 		fmt.Printf("Fetching go.mod for repository: %s (%s)\n", repo.Name, repo.URL)
-		results, err := c.fetcher.FetchRepositoryFiles(ctx, repo.URL, "main", "go.mod")
+		results, err := c.fetcher.Fetch(ctx, repo.URL, "main", "go.mod")
 		if err != nil {
 			return nil, fmt.Errorf("error fetching go.mod for %s: %w", repo.Name, err)
 		}
@@ -86,6 +95,14 @@ func (c *Conductor) printDependencyGraph(graph map[string]*depgraph.Service) {
 		for dep := range svc.Dependencies {
 			fmt.Printf("    depends on: %s\n", dep)
 		}
+	}
+}
+
+// printCurrentVersions prints the module path and CurrentVersion for each root service.
+func (c *Conductor) printCurrentVersions(graph map[string]*depgraph.Service) {
+	fmt.Println("Detected versions:")
+	for module, svc := range graph {
+		fmt.Printf("- %s: %s\n", module, svc.CurrentVersion)
 	}
 }
 
