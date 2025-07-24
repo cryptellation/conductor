@@ -32,7 +32,16 @@ This document outlines the development plan for the Conductor tool, broken down 
   - 1.5.1 Using the repofetcher, it should pull the go.mod in the repositories listed
   in the configuration. This should be done in the conductor package.
     - Status: done
-  - 1.5.2 Use the dependencies versioning to build a dependency graph.
+  - 1.5.2 Use the dependencies versioning to build a dependency graph: the dependency graph builder should be in its own package under /pkg and be used by /pkg/conductor. The builder must:
+    - Receive as input a map of repository module paths to their go.mod file contents (as parsed by the repofetcher)
+    - Output a map of module path to a Service struct, where Service contains at least:
+      - The module path (string)
+      - The repository URL (string)
+      - A map of dependencies (map[module path]*Service)
+    - There should never be duplicate Service structs for the same module path; all dependencies should point to the same instance
+    - The builder should be in its own package under /pkg and be used by /pkg/conductor
+    - Tests must be provided for the builder
+    - /pkg/conductor should be updated to use the builder
     - Status: to do
 
 - **1.6. Version Detection**
@@ -102,5 +111,14 @@ This document outlines the development plan for the Conductor tool, broken down 
     - Status:
 
 ---
+
+# Development Workflow Rules
+
+## Feature Development Phase
+- **First Phase**: Develop the feature, write tests, and ensure code quality
+- **Tests and linting MUST ONLY be executed through Dagger** – never run `go test` or `golangci-lint` directly
+- Run local tests and linting during development using Dagger commands
+- Set subtask status to `in progress` when starting development
+- Only proceed to shipping phase when user explicitly approves (e.g., "ship it", "ready to ship", etc.)
 
 _Review and adjust this plan as needed to fit project requirements and priorities._ 

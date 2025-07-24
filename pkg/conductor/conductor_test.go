@@ -55,7 +55,7 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 	}
 
 	expectedResults := map[string][]byte{
-		"go.mod": []byte("module github.com/test/repo\nrequire ..."),
+		"go.mod": []byte("module github.com/test/repo\nrequire github.com/test/dep v1.0.0\n"),
 	}
 
 	mockFetcher := repofetcher.NewMockFetcher(ctrl)
