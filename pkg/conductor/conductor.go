@@ -35,18 +35,18 @@ func (c *Conductor) Run(ctx context.Context) error {
 		return fmt.Errorf("no repositories configured")
 	}
 
-	// For now, process the first repository
-	// TODO: Process all repositories
-	repo := c.config.Repositories[0]
-
-	results, err := c.fetcher.FetchRepositoryFiles(ctx, repo.URL, "main", "README.md", "LICENSE")
-	if err != nil {
-		return fmt.Errorf("error fetching repository files: %w", err)
-	}
-
-	// Process and display results
-	for file, content := range results {
-		fmt.Printf("File: %s, Content: %d bytes\n", file, len(content))
+	for _, repo := range c.config.Repositories {
+		fmt.Printf("Fetching go.mod for repository: %s (%s)\n", repo.Name, repo.URL)
+		results, err := c.fetcher.FetchRepositoryFiles(ctx, repo.URL, "main", "go.mod")
+		if err != nil {
+			return fmt.Errorf("error fetching go.mod for %s: %w", repo.Name, err)
+		}
+		content, ok := results["go.mod"]
+		if !ok {
+			fmt.Printf("go.mod not found in repository: %s\n", repo.Name)
+			continue
+		}
+		fmt.Printf("Repository: %s, go.mod size: %d bytes\n", repo.Name, len(content))
 	}
 
 	return nil
