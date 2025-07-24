@@ -28,14 +28,17 @@ This document outlines the development plan for the Conductor tool, broken down 
   - 1.4.1 Use the configuration and the adapter to get the content of the configured repositories (no automatic discovery). The business logic should be written in `internal/core`, should use the Github adapter (via interface with dependency injection) and be used by the command in `cmd/conductor`. Use Uber gomock to mock the Github adapter.
     - Status: done
 
-- **1.5. Version Detection**
-  - 1.5.1 Implement version detection using the GitHub adapter to get tags and detect the last version of each dependency.
-    - Status: to do
-  - 1.5.2 Use the GitHub adapter to get files (e.g., go.mod) and detect the current version of dependencies used in each service or library.
+- **1.5. Dependency Graph Construction**
+  - 1.5.1 Using the repofetcher, it should pull the go.mod in the repositories listed
+  in the configuration. This should be done in the conductor package.
+    - Status: done
+  - 1.5.2 Use the dependencies versioning to build a dependency graph.
     - Status: to do
 
-- **1.6. Dependency Graph Construction**
-  - 1.6.1 Use the dependencies versioning to build a dependency graph.
+- **1.6. Version Detection**
+  - 1.6.1 Implement version detection using the GitHub adapter to get tags and detect the last version of each dependency.
+    - Status: to do
+  - 1.6.2 Use the GitHub adapter to get files (e.g., go.mod) and detect the current version of dependencies used in each service or library.
     - Status: to do
 
 - **1.7. Inconsistency Detection**
