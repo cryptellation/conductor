@@ -29,10 +29,10 @@ func (g *graphBuilder) BuildGraph(modules map[string]RepoModule) (map[string]*Se
 	services := make(map[string]*Service)
 	for modulePath, repo := range modules {
 		services[modulePath] = &Service{
-			ModulePath:     modulePath,
-			RepoURL:        repo.RepoURL,
-			Dependencies:   make(map[string]*Service),
-			CurrentVersion: "",
+			ModulePath:    modulePath,
+			RepoURL:       repo.RepoURL,
+			Dependencies:  make(map[string]Dependency),
+			LatestVersion: "",
 		}
 	}
 
@@ -45,7 +45,10 @@ func (g *graphBuilder) BuildGraph(modules map[string]RepoModule) (map[string]*Se
 		for _, req := range mf.Require {
 			depPath := req.Mod.Path
 			if depService, ok := services[depPath]; ok {
-				services[modulePath].Dependencies[depPath] = depService
+				services[modulePath].Dependencies[depPath] = Dependency{
+					Service:        depService,
+					CurrentVersion: req.Mod.Version,
+				}
 			}
 			// If dependency is not in the input set, ignore (external dependency)
 		}

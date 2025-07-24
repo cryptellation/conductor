@@ -1,4 +1,4 @@
-package repofetchers
+package repo
 
 func parseOwnerAndRepo(url string) (owner, repo string) {
 	const prefix = "github.com/"

@@ -1,6 +1,6 @@
-//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -destination=mock_version_detection.gen.go -package=repofetchers -source=version_detection.go VersionDetector
+//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -destination=mock_version_detection.gen.go -package=repo -source=version_detection.go VersionDetector
 
-package repofetchers
+package repo
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func DetectAndSetCurrentVersions(
 		}
 		latest := latestSemverTag(tags)
 		if latest != "" {
-			svc.CurrentVersion = latest
+			svc.LatestVersion = latest
 		}
 	}
 	return nil
@@ -88,7 +88,7 @@ func (v *versionDetector) DetectAndSetCurrentVersions(
 		}
 		latest := latestSemverTag(tags)
 		if latest != "" {
-			svc.CurrentVersion = latest
+			svc.LatestVersion = latest
 		}
 	}
 	return nil

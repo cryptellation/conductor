@@ -2,7 +2,7 @@
 // Source: fetcher.go
 
 // Package repofetcher is a generated GoMock package.
-package repofetchers
+package repo
 
 import (
 	context "context"

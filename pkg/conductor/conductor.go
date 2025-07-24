@@ -8,7 +8,7 @@ import (
 	"github.com/lerenn/conductor/pkg/adapters/github"
 	"github.com/lerenn/conductor/pkg/config"
 	"github.com/lerenn/conductor/pkg/depgraph"
-	"github.com/lerenn/conductor/pkg/repofetchers"
+	"github.com/lerenn/conductor/pkg/repo"
 	"golang.org/x/mod/modfile"
 )
 
@@ -17,9 +17,9 @@ import (
 type Conductor struct {
 	config          *config.Config
 	client          github.Client
-	fetcher         repofetchers.FilesFetcher
+	fetcher         repo.FilesFetcher
 	graphBuilder    depgraph.GraphBuilder
-	versionDetector repofetchers.VersionDetector
+	versionDetector repo.VersionDetector
 }
 
 // New creates a new Conductor instance with the given configuration and GitHub token.
@@ -28,9 +28,9 @@ func New(cfg *config.Config, token string) *Conductor {
 	return &Conductor{
 		config:          cfg,
 		client:          client,
-		fetcher:         repofetchers.NewFilesFetcher(client),
+		fetcher:         repo.NewFilesFetcher(client),
 		graphBuilder:    depgraph.NewGraphBuilder(),
-		versionDetector: repofetchers.NewVersionDetector(),
+		versionDetector: repo.NewVersionDetector(),
 	}
 }
 
@@ -102,7 +102,7 @@ func (c *Conductor) printDependencyGraph(graph map[string]*depgraph.Service) {
 func (c *Conductor) printCurrentVersions(graph map[string]*depgraph.Service) {
 	fmt.Println("Detected versions:")
 	for module, svc := range graph {
-		fmt.Printf("- %s: %s\n", module, svc.CurrentVersion)
+		fmt.Printf("- %s: %s\n", module, svc.LatestVersion)
 	}
 }
 

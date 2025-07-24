@@ -1,4 +1,4 @@
-package repofetchers
+package repo
 
 import (
 	"context"
