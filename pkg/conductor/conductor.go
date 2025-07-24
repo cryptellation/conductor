@@ -7,7 +7,9 @@ import (
 
 	"github.com/lerenn/conductor/pkg/adapters/github"
 	"github.com/lerenn/conductor/pkg/config"
+	"github.com/lerenn/conductor/pkg/depgraph"
 	"github.com/lerenn/conductor/pkg/repofetcher"
+	"golang.org/x/mod/modfile"
 )
 
 // Conductor represents the main conductor application that orchestrates
@@ -35,21 +37,56 @@ func (c *Conductor) Run(ctx context.Context) error {
 		return fmt.Errorf("no repositories configured")
 	}
 
+	modules, err := c.fetchModules(ctx)
+	if err != nil {
+		return err
+	}
+
+	graph, err := depgraph.BuildGraph(modules)
+	if err != nil {
+		return fmt.Errorf("failed to build dependency graph: %w", err)
+	}
+
+	c.printDependencyGraph(graph)
+	return nil
+}
+
+// fetchModules fetches go.mod files and builds the input map for the dependency graph builder.
+func (c *Conductor) fetchModules(ctx context.Context) (map[string]depgraph.RepoModule, error) {
+	modules := make(map[string]depgraph.RepoModule)
 	for _, repo := range c.config.Repositories {
 		fmt.Printf("Fetching go.mod for repository: %s (%s)\n", repo.Name, repo.URL)
 		results, err := c.fetcher.FetchRepositoryFiles(ctx, repo.URL, "main", "go.mod")
 		if err != nil {
-			return fmt.Errorf("error fetching go.mod for %s: %w", repo.Name, err)
+			return nil, fmt.Errorf("error fetching go.mod for %s: %w", repo.Name, err)
 		}
 		content, ok := results["go.mod"]
 		if !ok {
-			fmt.Printf("go.mod not found in repository: %s\n", repo.Name)
-			continue
+			return nil, fmt.Errorf("go.mod not found in repository: %s", repo.Name)
 		}
-		fmt.Printf("Repository: %s, go.mod size: %d bytes\n", repo.Name, len(content))
+		mf, err := modfile.Parse("go.mod", content, nil)
+		if err != nil || mf.Module == nil {
+			return nil, fmt.Errorf("could not parse module path for repo %s: %w", repo.Name, err)
+		}
+		modulePath := mf.Module.Mod.Path
+		modules[modulePath] = depgraph.RepoModule{
+			RepoURL:      repo.URL,
+			GoModContent: content,
+		}
+		fmt.Printf("Repository: %s, module path: %s, go.mod size: %d bytes\n", repo.Name, modulePath, len(content))
 	}
+	return modules, nil
+}
 
-	return nil
+// printDependencyGraph prints the dependency graph in a readable format.
+func (c *Conductor) printDependencyGraph(graph map[string]*depgraph.Service) {
+	fmt.Println("Dependency graph:")
+	for module, svc := range graph {
+		fmt.Printf("- %s (%s):\n", module, svc.RepoURL)
+		for dep := range svc.Dependencies {
+			fmt.Printf("    depends on: %s\n", dep)
+		}
+	}
 }
 
 // RunWithLogging executes the conductor workflow with logging.

@@ -28,7 +28,15 @@ This rule centralizes all Dagger CI-related requirements and best practices for 
 - Keep the Dagger CLI and Go SDK versions in sync with the project's requirements.
 - If upgrading Dagger, test all pipelines and update this rule with any new best practices or breaking changes.
 
-## 4. Centralization
+## 4. Integration Test Environment
+- **You MUST always export the `.env` file content before running integration tests with Dagger.**
+  ```sh
+  export $(cat .env | xargs)
+  dagger call integration-tests --source-dir . --github-token env:GITHUB_TOKEN
+  ```
+- This ensures all required environment variables are available to the Dagger pipeline.
+
+## 5. Centralization
 - All Dagger-related CI rules, conventions, and best practices should be added to this file (`dagger.mdc`) for easy reference and enforcement.
 
 ---
@@ -41,6 +49,11 @@ This rule centralizes all Dagger CI-related requirements and best practices for 
    dagger call integration-tests --source-dir . --github-token env:GITHUB_TOKEN
    ```
 4. Use the new function via the Dagger CLI or in CI/CD.
+
+**Example Workflow:**
+1. Edit `.dagger/main.go` to add a new pipeline function.
+2. Run `dagger develop` in the project root.
+3. Use the new function via the Dagger CLI or in CI/CD.
 
 **Example Workflow:**
 1. Edit `.dagger/main.go` to add a new pipeline function.
