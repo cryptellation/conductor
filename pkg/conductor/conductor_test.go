@@ -55,17 +55,44 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 	}
 
 	expectedResults := map[string][]byte{
-		"README.md": []byte("# Test Repository"),
-		"LICENSE":   []byte("MIT License"),
+		"go.mod": []byte("module github.com/test/repo\nrequire ..."),
 	}
 
 	mockFetcher := repofetcher.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
-		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "README.md", "LICENSE").
+		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(expectedResults, nil)
 
 	c := New(cfg, "test-token")
 	// Replace the fetcher with a mock for testing
+	c.fetcher = mockFetcher
+
+	ctx := context.Background()
+	err := c.Run(ctx)
+
+	assert.NoError(t, err)
+}
+
+func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	cfg := &config.Config{
+		Repositories: []config.Repository{
+			{Name: "repo1", URL: "https://github.com/test/repo1"},
+			{Name: "repo2", URL: "https://github.com/test/repo2"},
+		},
+	}
+
+	mockFetcher := repofetcher.NewMockFetcher(ctrl)
+	mockFetcher.EXPECT().
+		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo1", "main", "go.mod").
+		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo1")}, nil)
+	mockFetcher.EXPECT().
+		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo2", "main", "go.mod").
+		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo2")}, nil)
+
+	c := New(cfg, "test-token")
 	c.fetcher = mockFetcher
 
 	ctx := context.Background()
@@ -86,7 +113,7 @@ func TestConductor_Run_WithRepositories_FetchError(t *testing.T) {
 
 	mockFetcher := repofetcher.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
-		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "README.md", "LICENSE").
+		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(nil, assert.AnError)
 
 	c := New(cfg, "test-token")
@@ -97,5 +124,5 @@ func TestConductor_Run_WithRepositories_FetchError(t *testing.T) {
 	err := c.Run(ctx)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "error fetching repository files")
+	assert.Contains(t, err.Error(), "error fetching go.mod")
 }
