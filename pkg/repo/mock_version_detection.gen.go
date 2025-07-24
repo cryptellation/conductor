@@ -2,7 +2,7 @@
 // Source: version_detection.go
 
 // Package repofetcher is a generated GoMock package.
-package repofetchers
+package repo
 
 import (
 	context "context"

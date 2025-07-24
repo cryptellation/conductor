@@ -1,4 +1,4 @@
-package repofetchers
+package repo
 
 import (
 	"context"
@@ -20,12 +20,12 @@ func TestDetectAndSetCurrentVersions_HappyPath(t *testing.T) {
 		"github.com/example/A": {
 			ModulePath:   "github.com/example/A",
 			RepoURL:      "https://github.com/example/A.git",
-			Dependencies: map[string]*depgraph.Service{},
+			Dependencies: map[string]depgraph.Dependency{},
 		},
 		"github.com/example/B": {
 			ModulePath:   "github.com/example/B",
 			RepoURL:      "https://github.com/example/B.git",
-			Dependencies: map[string]*depgraph.Service{},
+			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}
 
@@ -38,6 +38,6 @@ func TestDetectAndSetCurrentVersions_HappyPath(t *testing.T) {
 
 	err := DetectAndSetCurrentVersions(context.Background(), mockClient, services)
 	require.NoError(t, err)
-	require.Equal(t, "v1.2.3", services["github.com/example/A"].CurrentVersion)
-	require.Equal(t, "", services["github.com/example/B"].CurrentVersion)
+	require.Equal(t, "v1.2.3", services["github.com/example/A"].LatestVersion)
+	require.Equal(t, "", services["github.com/example/B"].LatestVersion)
 }

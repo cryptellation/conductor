@@ -23,34 +23,43 @@ require github.com/example/B v1.0.0
 	b := graph["github.com/example/B"]
 	require.NotNil(t, a)
 	require.NotNil(t, b)
-	require.Equal(t, b, a.Dependencies["github.com/example/B"])
+	dep, ok := a.Dependencies["github.com/example/B"]
+	require.True(t, ok)
+	require.Equal(t, b, dep.Service)
+	require.Equal(t, "v1.0.0", dep.CurrentVersion)
 }
 
 func TestBuildGraph_SharedDependency(t *testing.T) {
 	modA := []byte(`module github.com/example/A
-require github.com/example/C v1.0.0
+require github.com/example/C/v2 v2.0.0
 `)
 	modB := []byte(`module github.com/example/B
-require github.com/example/C v1.0.0
+require github.com/example/C/v2 v2.1.0
 `)
-	modC := []byte(`module github.com/example/C
+	modC := []byte(`module github.com/example/C/v2
 `)
 	modules := map[string]RepoModule{
-		"github.com/example/A": {RepoURL: "https://github.com/example/A.git", GoModContent: modA},
-		"github.com/example/B": {RepoURL: "https://github.com/example/B.git", GoModContent: modB},
-		"github.com/example/C": {RepoURL: "https://github.com/example/C.git", GoModContent: modC},
+		"github.com/example/A":    {RepoURL: "https://github.com/example/A.git", GoModContent: modA},
+		"github.com/example/B":    {RepoURL: "https://github.com/example/B.git", GoModContent: modB},
+		"github.com/example/C/v2": {RepoURL: "https://github.com/example/C.git", GoModContent: modC},
 	}
 	graph, err := NewGraphBuilder().BuildGraph(modules)
 	require.NoError(t, err)
 	a := graph["github.com/example/A"]
 	b := graph["github.com/example/B"]
-	c := graph["github.com/example/C"]
+	c := graph["github.com/example/C/v2"]
 	require.NotNil(t, a)
 	require.NotNil(t, b)
 	require.NotNil(t, c)
-	require.Equal(t, c, a.Dependencies["github.com/example/C"])
-	require.Equal(t, c, b.Dependencies["github.com/example/C"])
-	require.True(t, a.Dependencies["github.com/example/C"] == b.Dependencies["github.com/example/C"])
+	depA, okA := a.Dependencies["github.com/example/C/v2"]
+	depB, okB := b.Dependencies["github.com/example/C/v2"]
+	require.True(t, okA)
+	require.True(t, okB)
+	require.Equal(t, c, depA.Service)
+	require.Equal(t, c, depB.Service)
+	require.Equal(t, "v2.0.0", depA.CurrentVersion)
+	require.Equal(t, "v2.1.0", depB.CurrentVersion)
+	require.True(t, depA.Service == depB.Service)
 }
 
 func TestBuildGraph_ExternalDependencyIgnored(t *testing.T) {
@@ -68,6 +77,8 @@ require github.com/external/X v1.2.3
 	require.NoError(t, err)
 	a := graph["github.com/example/A"]
 	require.NotNil(t, a)
-	require.Contains(t, a.Dependencies, "github.com/example/B")
+	dep, ok := a.Dependencies["github.com/example/B"]
+	require.True(t, ok)
+	require.Equal(t, "v1.0.0", dep.CurrentVersion)
 	require.NotContains(t, a.Dependencies, "github.com/external/X")
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/lerenn/conductor/pkg/config"
 	"github.com/lerenn/conductor/pkg/depgraph"
-	"github.com/lerenn/conductor/pkg/repofetchers"
+	"github.com/lerenn/conductor/pkg/repo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -36,7 +36,7 @@ func TestConductor_Run_NoRepositories(t *testing.T) {
 
 	c := New(cfg, "test-token")
 	// Replace the fetcher with a mock for testing
-	c.fetcher = repofetchers.NewMockFetcher(ctrl)
+	c.fetcher = repo.NewMockFetcher(ctrl)
 
 	ctx := context.Background()
 	err := c.Run(ctx)
@@ -59,7 +59,7 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 		"go.mod": []byte("module github.com/test/repo\nrequire github.com/test/dep v1.0.0\n"),
 	}
 
-	mockFetcher := repofetchers.NewMockFetcher(ctrl)
+	mockFetcher := repo.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
 		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(expectedResults, nil)
@@ -69,12 +69,12 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 		"github.com/test/repo": {
 			ModulePath:   "github.com/test/repo",
 			RepoURL:      "https://github.com/test/repo",
-			Dependencies: map[string]*depgraph.Service{},
+			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}
 	mockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
 
-	mockVersionDetector := repofetchers.NewMockVersionDetector(ctrl)
+	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
 	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
 
 	c := New(cfg, "test-token")
@@ -99,7 +99,7 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 		},
 	}
 
-	mockFetcher := repofetchers.NewMockFetcher(ctrl)
+	mockFetcher := repo.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
 		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo1", "main", "go.mod").
 		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo1")}, nil)
@@ -112,17 +112,17 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 		"github.com/test/repo1": {
 			ModulePath:   "github.com/test/repo1",
 			RepoURL:      "https://github.com/test/repo1",
-			Dependencies: map[string]*depgraph.Service{},
+			Dependencies: map[string]depgraph.Dependency{},
 		},
 		"github.com/test/repo2": {
 			ModulePath:   "github.com/test/repo2",
 			RepoURL:      "https://github.com/test/repo2",
-			Dependencies: map[string]*depgraph.Service{},
+			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}
 	mockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
 
-	mockVersionDetector := repofetchers.NewMockVersionDetector(ctrl)
+	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
 	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
 
 	c := New(cfg, "test-token")
@@ -146,7 +146,7 @@ func TestConductor_Run_WithRepositories_FetchError(t *testing.T) {
 		},
 	}
 
-	mockFetcher := repofetchers.NewMockFetcher(ctrl)
+	mockFetcher := repo.NewMockFetcher(ctrl)
 	mockFetcher.EXPECT().
 		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(nil, assert.AnError)
