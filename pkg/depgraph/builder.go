@@ -1,3 +1,4 @@
+//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -destination=mock_builder.gen.go -package=depgraph -source=builder.go GraphBuilder
 package depgraph
 
 import (
@@ -12,17 +13,26 @@ type RepoModule struct {
 	GoModContent []byte
 }
 
-// BuildGraph builds the dependency graph from the given modules.
-// Input: map[modulePath]RepoModule
-// Output: map[modulePath]*Service.
-func BuildGraph(modules map[string]RepoModule) (map[string]*Service, error) {
+// GraphBuilder defines the interface for building dependency graphs.
+type GraphBuilder interface {
+	BuildGraph(modules map[string]RepoModule) (map[string]*Service, error)
+}
+
+type graphBuilder struct{}
+
+func NewGraphBuilder() GraphBuilder {
+	return &graphBuilder{}
+}
+
+func (g *graphBuilder) BuildGraph(modules map[string]RepoModule) (map[string]*Service, error) {
 	// First pass: create all Service nodes (no dependencies yet)
 	services := make(map[string]*Service)
 	for modulePath, repo := range modules {
 		services[modulePath] = &Service{
-			ModulePath:   modulePath,
-			RepoURL:      repo.RepoURL,
-			Dependencies: make(map[string]*Service),
+			ModulePath:     modulePath,
+			RepoURL:        repo.RepoURL,
+			Dependencies:   make(map[string]*Service),
+			CurrentVersion: "",
 		}
 	}
 

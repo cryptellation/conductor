@@ -2,7 +2,7 @@
 // Source: fetcher.go
 
 // Package repofetcher is a generated GoMock package.
-package repofetcher
+package repofetchers
 
 import (
 	context "context"
@@ -34,8 +34,8 @@ func (m *MockFetcher) EXPECT() *MockFetcherMockRecorder {
 	return m.recorder
 }
 
-// FetchRepositoryFiles mocks base method.
-func (m *MockFetcher) FetchRepositoryFiles(ctx context.Context, repoURL, ref string, files ...string) (map[string][]byte, error) {
+// Fetch mocks base method.
+func (m *MockFetcher) Fetch(ctx context.Context, repoURL, ref string, files ...string) (map[string][]byte, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, repoURL, ref}
 	for _, a := range files {
@@ -51,5 +51,5 @@ func (m *MockFetcher) FetchRepositoryFiles(ctx context.Context, repoURL, ref str
 func (mr *MockFetcherMockRecorder) FetchRepositoryFiles(ctx, repoURL, ref interface{}, files ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, repoURL, ref}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchRepositoryFiles", reflect.TypeOf((*MockFetcher)(nil).FetchRepositoryFiles), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchRepositoryFiles", reflect.TypeOf((*MockFetcher)(nil).Fetch), varargs...)
 }
