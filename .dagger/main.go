@@ -74,3 +74,10 @@ func (m *Conductor) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
 	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
 	return c.WithExec([]string{"go", "test", "./pkg/...", "-v"})
 }
+
+// Generate runs 'go generate ./...' and then 'sh scripts/check-generation.sh' in the repo.
+func (m *Conductor) Generate(sourceDir *dagger.Directory) *dagger.Container {
+	c := dag.Container().From("golang:1.24-alpine")
+	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
+	return c.WithExec([]string{"sh", "-c", "go generate ./... && sh scripts/check-generation.sh"})
+}

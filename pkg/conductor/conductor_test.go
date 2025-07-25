@@ -36,7 +36,7 @@ func TestConductor_Run_NoRepositories(t *testing.T) {
 
 	c := New(cfg, "test-token")
 	// Replace the fetcher with a mock for testing
-	c.fetcher = repo.NewMockFetcher(ctrl)
+	c.fetcher = repo.NewMockFilesFetcher(ctrl)
 
 	ctx := context.Background()
 	err := c.Run(ctx)
@@ -59,9 +59,9 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 		"go.mod": []byte("module github.com/test/repo\nrequire github.com/test/dep v1.0.0\n"),
 	}
 
-	mockFetcher := repo.NewMockFetcher(ctrl)
+	mockFetcher := repo.NewMockFilesFetcher(ctrl)
 	mockFetcher.EXPECT().
-		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
+		Fetch(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(expectedResults, nil)
 
 	mockGraphBuilder := depgraph.NewMockGraphBuilder(ctrl)
@@ -102,12 +102,12 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 		},
 	}
 
-	mockFetcher := repo.NewMockFetcher(ctrl)
+	mockFetcher := repo.NewMockFilesFetcher(ctrl)
 	mockFetcher.EXPECT().
-		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo1", "main", "go.mod").
+		Fetch(gomock.Any(), "https://github.com/test/repo1", "main", "go.mod").
 		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo1")}, nil)
 	mockFetcher.EXPECT().
-		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo2", "main", "go.mod").
+		Fetch(gomock.Any(), "https://github.com/test/repo2", "main", "go.mod").
 		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo2")}, nil)
 
 	mockGraphBuilder := depgraph.NewMockGraphBuilder(ctrl)
@@ -151,9 +151,9 @@ func TestConductor_Run_WithRepositories_FetchError(t *testing.T) {
 		},
 	}
 
-	mockFetcher := repo.NewMockFetcher(ctrl)
+	mockFetcher := repo.NewMockFilesFetcher(ctrl)
 	mockFetcher.EXPECT().
-		FetchRepositoryFiles(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
+		Fetch(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(nil, assert.AnError)
 
 	c := New(cfg, "test-token")

@@ -7,7 +7,7 @@ import (
 	"github.com/lerenn/conductor/pkg/adapters/github"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -source=fetcher.go -destination=mock_fetcher.gen.go -package=repo
+//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -source=files_fetcher.go -destination=mock_fetcher.gen.go -package=repo
 
 // ErrInvalidRepoURL is returned when the repository URL cannot be parsed.
 var ErrInvalidRepoURL = errors.New("invalid repository URL")
