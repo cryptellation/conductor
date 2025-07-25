@@ -20,7 +20,7 @@ func TestLoad(t *testing.T) {
 		t.Fatalf("failed to write test config: %v", err)
 	}
 
-	cfg, err := Load(dir)
+	cfg, err := Load(file)
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}

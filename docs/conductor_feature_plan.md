@@ -46,7 +46,7 @@ This document outlines the actionable development plan for the Conductor tool. O
 
 - **1.7. Inconsistency Detection**
   - 1.7.1 Detect inconsistencies between the last version of a dependency and the version used in libraries/services on all repositories, based on the dependency graph and version detection.
-    - Status: to do
+    - Status: done
     - Implementation clarifications (2024-06-11):
       - Only repositories/services listed in the config (roots of the dependency graph) are checked for inconsistencies.
       - Only direct dependencies are checked (not transitive dependencies).
