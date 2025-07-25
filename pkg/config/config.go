@@ -14,9 +14,8 @@ type Config struct {
 }
 
 func Load(configPath string) (*Config, error) {
-	viper.SetConfigName("conductor")
+	viper.SetConfigFile(configPath)
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(configPath)
 
 	var config Config
 
