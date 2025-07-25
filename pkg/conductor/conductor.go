@@ -3,12 +3,13 @@ package conductor
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/lerenn/conductor/pkg/adapters/github"
 	"github.com/lerenn/conductor/pkg/config"
 	"github.com/lerenn/conductor/pkg/depgraph"
+	"github.com/lerenn/conductor/pkg/logging"
 	"github.com/lerenn/conductor/pkg/repo"
+	"go.uber.org/zap"
 	"golang.org/x/mod/modfile"
 )
 
@@ -57,18 +58,23 @@ func (c *Conductor) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to detect versions: %w", err)
 	}
 
-	c.printDependencyGraph(graph)
-	c.printCurrentVersions(graph)
+	c.printDependencyGraph(ctx, graph)
+	c.printCurrentVersions(ctx, graph)
 
 	mismatches, err := c.checker.Check(graph)
 	if err != nil {
 		return fmt.Errorf("failed to check for inconsistencies: %w", err)
 	}
 	if len(mismatches) > 0 {
-		fmt.Println("Version inconsistencies detected:")
+		logging.C(ctx).Warn("Version inconsistencies detected")
 		for svc, deps := range mismatches {
 			for dep, mismatch := range deps {
-				fmt.Printf("- %s depends on %s: actual=%s, latest=%s\n", svc, dep, mismatch.Actual, mismatch.Latest)
+				logging.C(ctx).Warn("Dependency version mismatch",
+					zap.String("service", svc),
+					zap.String("dependency", dep),
+					zap.String("actual", mismatch.Actual),
+					zap.String("latest", mismatch.Latest),
+				)
 			}
 		}
 	}
@@ -80,7 +86,10 @@ func (c *Conductor) Run(ctx context.Context) error {
 func (c *Conductor) fetchModules(ctx context.Context) (map[string]depgraph.RepoModule, error) {
 	modules := make(map[string]depgraph.RepoModule)
 	for _, repo := range c.config.Repositories {
-		fmt.Printf("Fetching go.mod for repository: %s (%s)\n", repo.Name, repo.URL)
+		logging.C(ctx).Info("Fetching go.mod for repository",
+			zap.String("name", repo.Name),
+			zap.String("url", repo.URL),
+		)
 		results, err := c.fetcher.Fetch(ctx, repo.URL, "main", "go.mod")
 		if err != nil {
 			return nil, fmt.Errorf("error fetching go.mod for %s: %w", repo.Name, err)
@@ -98,35 +107,50 @@ func (c *Conductor) fetchModules(ctx context.Context) (map[string]depgraph.RepoM
 			RepoURL:      repo.URL,
 			GoModContent: content,
 		}
-		fmt.Printf("Repository: %s, module path: %s, go.mod size: %d bytes\n", repo.Name, modulePath, len(content))
+		logging.C(ctx).Info("Repository module info",
+			zap.String("name", repo.Name),
+			zap.String("module_path", modulePath),
+			zap.Int("go_mod_size", len(content)),
+		)
 	}
 	return modules, nil
 }
 
 // printDependencyGraph prints the dependency graph in a readable format.
-func (c *Conductor) printDependencyGraph(graph map[string]*depgraph.Service) {
-	fmt.Println("Dependency graph:")
+func (c *Conductor) printDependencyGraph(ctx context.Context, graph map[string]*depgraph.Service) {
+	logging.C(ctx).Info("Dependency graph:")
 	for module, svc := range graph {
-		fmt.Printf("- %s:\n", module)
-		for dep := range svc.Dependencies {
-			fmt.Printf("    depends on: %s\n", dep)
-		}
+		logging.C(ctx).Info("Module dependencies",
+			zap.String("module", module),
+			zap.Strings("dependencies", depKeys(svc.Dependencies)),
+		)
 	}
 }
 
+func depKeys(m map[string]depgraph.Dependency) []string {
+	res := make([]string, 0, len(m))
+	for k := range m {
+		res = append(res, k)
+	}
+	return res
+}
+
 // printCurrentVersions prints the module path and CurrentVersion for each root service.
-func (c *Conductor) printCurrentVersions(graph map[string]*depgraph.Service) {
-	fmt.Println("Detected versions:")
+func (c *Conductor) printCurrentVersions(ctx context.Context, graph map[string]*depgraph.Service) {
+	logging.C(ctx).Info("Detected versions:")
 	for module, svc := range graph {
-		fmt.Printf("- %s: %s\n", module, svc.LatestVersion)
+		logging.C(ctx).Info("Module version",
+			zap.String("module", module),
+			zap.String("latest_version", svc.LatestVersion),
+		)
 	}
 }
 
 // RunWithLogging executes the conductor workflow with logging.
 func (c *Conductor) RunWithLogging(ctx context.Context) {
-	fmt.Printf("Loaded configuration: %+v\n", c.config)
+	logging.C(ctx).Info("Loaded configuration", zap.Any("config", c.config))
 
 	if err := c.Run(ctx); err != nil {
-		log.Fatalf("Error running conductor: %v", err)
+		logging.C(ctx).Fatal("Error running conductor", zap.Error(err))
 	}
 }
