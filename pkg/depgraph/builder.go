@@ -27,10 +27,9 @@ func NewGraphBuilder() GraphBuilder {
 func (g *graphBuilder) BuildGraph(modules map[string]RepoModule) (map[string]*Service, error) {
 	// First pass: create all Service nodes (no dependencies yet)
 	services := make(map[string]*Service)
-	for modulePath, repo := range modules {
+	for modulePath := range modules {
 		services[modulePath] = &Service{
 			ModulePath:    modulePath,
-			RepoURL:       repo.RepoURL,
 			Dependencies:  make(map[string]Dependency),
 			LatestVersion: "",
 		}

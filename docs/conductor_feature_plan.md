@@ -5,7 +5,6 @@ This document outlines the actionable development plan for the Conductor tool. O
 ---
 
 ## Current Focus
-- 1.6.2 Use the GitHub adapter to get files (e.g., go.mod) and detect the current version of dependencies used in each service or library. (Status: to do)
 - 1.7.1 Detect inconsistencies between the last version of a dependency and the version used in libraries/services on all repositories, based on the dependency graph and version detection. (Status: to do)
 - 2.1.1 Integrate with GitHub (and/or other platforms) for API access. (Status: )
 - 2.1.2 Handle authentication and permissions. (Status: )
@@ -48,6 +47,19 @@ This document outlines the actionable development plan for the Conductor tool. O
 - **1.7. Inconsistency Detection**
   - 1.7.1 Detect inconsistencies between the last version of a dependency and the version used in libraries/services on all repositories, based on the dependency graph and version detection.
     - Status: to do
+    - Implementation clarifications (2024-06-11):
+      - Only repositories/services listed in the config (roots of the dependency graph) are checked for inconsistencies.
+      - Only direct dependencies are checked (not transitive dependencies).
+      - An inconsistency is defined as: the latest version of a dependency (as detected) is greater than the version used by a service/library in its direct dependencies (any difference, not just major/minor).
+      - Only semantic versioning tags are considered (e.g., v1.2.3). Non-semver and pre-release tags are ignored.
+      - Use the most common Go semantic versioning library for version comparison.
+      - The logic should be implemented in a new file under `pkg/depgraph` as a new struct with its own interface and mock, named `InconsistencyChecker`, with a function `Check`.
+      - The `Check` function should take the dependency graph (`map[string]*Service`) as parameter and return a `map[string]map[string]Mismatch`, where the first string is the service Go module path, the second is its dependency Go module path, and `Mismatch` is a struct with `Actual` and `Latest` version fields (no additional fields).
+      - The output should only contain mismatched dependencies (no output for up-to-date dependencies).
+      - If a dependency has no detected latest version (e.g., no tags), it is skipped (not an error).
+      - Any error during the process should cause a fail-fast (immediate failure) with a descriptive error message.
+      - Tests should use only mocks (generated with Uber gomock) and cover the happy path (no edge cases required).
+      - The logic should be internal and used by `pkg/conductor/conductor.go` to print mismatches (simple print output only).
 
 ---
 

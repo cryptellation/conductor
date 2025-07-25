@@ -68,7 +68,6 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 	mockGraph := map[string]*depgraph.Service{
 		"github.com/test/repo": {
 			ModulePath:   "github.com/test/repo",
-			RepoURL:      "https://github.com/test/repo",
 			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}
@@ -77,10 +76,14 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
 	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
 
+	mockChecker := depgraph.NewMockInconsistencyChecker(ctrl)
+	mockChecker.EXPECT().Check(mockGraph).Return(map[string]map[string]depgraph.Mismatch{}, nil)
+
 	c := New(cfg, "test-token")
 	c.fetcher = mockFetcher
 	c.graphBuilder = mockGraphBuilder
 	c.versionDetector = mockVersionDetector
+	c.checker = mockChecker
 
 	ctx := context.Background()
 	err := c.Run(ctx)
@@ -111,12 +114,10 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 	mockGraph := map[string]*depgraph.Service{
 		"github.com/test/repo1": {
 			ModulePath:   "github.com/test/repo1",
-			RepoURL:      "https://github.com/test/repo1",
 			Dependencies: map[string]depgraph.Dependency{},
 		},
 		"github.com/test/repo2": {
 			ModulePath:   "github.com/test/repo2",
-			RepoURL:      "https://github.com/test/repo2",
 			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}
@@ -125,10 +126,14 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
 	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
 
+	mockChecker := depgraph.NewMockInconsistencyChecker(ctrl)
+	mockChecker.EXPECT().Check(mockGraph).Return(map[string]map[string]depgraph.Mismatch{}, nil)
+
 	c := New(cfg, "test-token")
 	c.fetcher = mockFetcher
 	c.graphBuilder = mockGraphBuilder
 	c.versionDetector = mockVersionDetector
+	c.checker = mockChecker
 
 	ctx := context.Background()
 	err := c.Run(ctx)
