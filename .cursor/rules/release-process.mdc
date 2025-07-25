@@ -1,0 +1,81 @@
+---
+title: Release & Merge Process Rule
+description: This rule describes the required steps to ship code when the user says it is ready.
+alwaysApply: true
+---
+
+**Follow these steps in order. If any command fails and you cannot fix it, STOP and do not proceed.**
+
+## 1. Prepare the code
+
+- Generate the code:
+  `go generate ./...`
+
+## 2. Dagger Checkup Workflow
+
+For each command below, if it fails, attempt to fix the error and re-run the command until it succeeds before continuing:
+
+- Lint the code:  
+  `dagger call lint --source-dir .`
+- Lint Dagger code:  
+  `dagger call lint-dagger --source-dir=.`
+- Run unit tests:  
+  `dagger call unit-tests --source-dir .`
+- Run integration tests:  
+  `export $(cat .env | xargs) && dagger call integration-tests --source-dir . --github-token env:GITHUB_TOKEN`
+
+---
+
+## 3. Branch and Commit Creation
+
+- Determine the type of change and use the appropriate prefix for branch and commit names:
+
+  | Change          | Branch prefix    | Commit prefix                 |
+  |-----------------|------------------|-------------------------------|
+  | Breaking change | breaking-change- | BREAKING CHANGE[(<subject>)]: |
+  | Feature         | feat-            | feat[(<subject>)]:            |
+  | Fix             | fix-             | fix[(<subject>)]:             |
+
+  - Replace `<subject>` with a concise description.
+  - Add a meaningful commit description.
+
+- Execute:
+
+  - Create a new branch:  
+    `git checkout -b <branch name>`
+  - Stage all changes:  
+    `git add -A`
+  - Commit:  
+    `git commit -m "<commit name> <description>"`
+  - Push:  
+    `git push -u origin <branch name>`
+
+---
+
+## 4. Pull Request Management
+
+- Create the PR:  
+  `unset GITHUB_TOKEN && gh pr create --fill --base main --head <branch name>`
+  - Note the PR number (`PR#`).
+- Watch PR checks:  
+  `sleep 5 && gh pr checks <PR#> --watch`
+  - If any check fails, STOP.
+- Merge and delete branch:  
+  `gh pr merge <PR#> --squash --delete-branch`
+
+---
+
+## 5. Post-merge Operations
+
+- Prepare for next development cycle:
+  - Switch to main:  
+    `git checkout main`
+  - Pull latest changes:  
+    `git pull`
+
+---
+
+## 6. Completion
+
+- Confirm all steps are complete and the local environment is up to date.
+

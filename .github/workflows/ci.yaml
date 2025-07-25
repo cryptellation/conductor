@@ -22,10 +22,37 @@ jobs:
           verb: call
           args: lint --source-dir=.
 
+  generate:
+    name: Run code generation
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dagger/dagger-for-github@8.0.0
+        with:
+          version: latest
+          verb: call
+          args: generate --source-dir=.
+
+  unit-tests:
+    name: Run unit tests
+    if: github.event_name == 'pull_request'
+    needs: [lint, generate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dagger/dagger-for-github@8.0.0
+        with:
+          version: latest
+          verb: call
+          args: unit-tests --source-dir=. 
+
   integration-tests:
     name: Run integration tests
     if: github.event_name == 'pull_request'
-    needs: [lint, unit-tests]
+    needs: [lint, generate, unit-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -37,17 +64,3 @@ jobs:
           args: integration-tests --source-dir=. --github-token=env:GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
-
-  unit-tests:
-    name: Run unit tests
-    if: github.event_name == 'pull_request'
-    needs: [lint]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dagger/dagger-for-github@8.0.0
-        with:
-          version: latest
-          verb: call
-          args: unit-tests --source-dir=. 
