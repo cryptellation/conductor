@@ -23,13 +23,13 @@ func DetectAndSetCurrentVersions(
 	services map[string]*depgraph.Service,
 ) error {
 	for _, svc := range services {
-		owner, repo := parseOwnerAndRepo(svc.RepoURL)
+		owner, repo := parseOwnerAndRepo(svc.ModulePath)
 		if owner == "" || repo == "" {
-			return fmt.Errorf("invalid repo URL: %s", svc.RepoURL)
+			return fmt.Errorf("invalid module path: %s", svc.ModulePath)
 		}
 		tags, err := client.ListTags(ctx, owner, repo)
 		if err != nil {
-			return fmt.Errorf("error fetching tags for %s: %w", svc.RepoURL, err)
+			return fmt.Errorf("error fetching tags for %s: %w", svc.ModulePath, err)
 		}
 		latest := latestSemverTag(tags)
 		if latest != "" {
@@ -78,13 +78,13 @@ func (v *versionDetector) DetectAndSetCurrentVersions(
 	services map[string]*depgraph.Service,
 ) error {
 	for _, svc := range services {
-		owner, repo := parseOwnerAndRepo(svc.RepoURL)
+		owner, repo := parseOwnerAndRepo(svc.ModulePath)
 		if owner == "" || repo == "" {
-			return fmt.Errorf("invalid repo URL: %s", svc.RepoURL)
+			return fmt.Errorf("invalid module path: %s", svc.ModulePath)
 		}
 		tags, err := client.ListTags(ctx, owner, repo)
 		if err != nil {
-			return fmt.Errorf("error fetching tags for %s: %w", svc.RepoURL, err)
+			return fmt.Errorf("error fetching tags for %s: %w", svc.ModulePath, err)
 		}
 		latest := latestSemverTag(tags)
 		if latest != "" {

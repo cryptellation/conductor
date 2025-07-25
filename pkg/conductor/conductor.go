@@ -20,6 +20,7 @@ type Conductor struct {
 	fetcher         repo.FilesFetcher
 	graphBuilder    depgraph.GraphBuilder
 	versionDetector repo.VersionDetector
+	checker         depgraph.InconsistencyChecker
 }
 
 // New creates a new Conductor instance with the given configuration and GitHub token.
@@ -31,6 +32,7 @@ func New(cfg *config.Config, token string) *Conductor {
 		fetcher:         repo.NewFilesFetcher(client),
 		graphBuilder:    depgraph.NewGraphBuilder(),
 		versionDetector: repo.NewVersionDetector(),
+		checker:         depgraph.NewInconsistencyChecker(),
 	}
 }
 
@@ -57,6 +59,20 @@ func (c *Conductor) Run(ctx context.Context) error {
 
 	c.printDependencyGraph(graph)
 	c.printCurrentVersions(graph)
+
+	mismatches, err := c.checker.Check(graph)
+	if err != nil {
+		return fmt.Errorf("failed to check for inconsistencies: %w", err)
+	}
+	if len(mismatches) > 0 {
+		fmt.Println("Version inconsistencies detected:")
+		for svc, deps := range mismatches {
+			for dep, mismatch := range deps {
+				fmt.Printf("- %s depends on %s: actual=%s, latest=%s\n", svc, dep, mismatch.Actual, mismatch.Latest)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -91,7 +107,7 @@ func (c *Conductor) fetchModules(ctx context.Context) (map[string]depgraph.RepoM
 func (c *Conductor) printDependencyGraph(graph map[string]*depgraph.Service) {
 	fmt.Println("Dependency graph:")
 	for module, svc := range graph {
-		fmt.Printf("- %s (%s):\n", module, svc.RepoURL)
+		fmt.Printf("- %s:\n", module)
 		for dep := range svc.Dependencies {
 			fmt.Printf("    depends on: %s\n", dep)
 		}

@@ -9,6 +9,7 @@ require (
 	go.uber.org/mock v0.5.2
 	golang.org/x/mod v0.25.0
 	golang.org/x/oauth2 v0.30.0
+	github.com/Masterminds/semver/v3 v3.4.0
 )
 
 require (

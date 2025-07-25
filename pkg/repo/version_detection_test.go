@@ -19,12 +19,10 @@ func TestDetectAndSetCurrentVersions_HappyPath(t *testing.T) {
 	services := map[string]*depgraph.Service{
 		"github.com/example/A": {
 			ModulePath:   "github.com/example/A",
-			RepoURL:      "https://github.com/example/A.git",
 			Dependencies: map[string]depgraph.Dependency{},
 		},
 		"github.com/example/B": {
 			ModulePath:   "github.com/example/B",
-			RepoURL:      "https://github.com/example/B.git",
 			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}

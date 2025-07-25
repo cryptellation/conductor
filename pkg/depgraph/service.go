@@ -9,7 +9,12 @@ type Dependency struct {
 // Service represents a Go module/service in the dependency graph.
 type Service struct {
 	ModulePath    string
-	RepoURL       string
 	Dependencies  map[string]Dependency
 	LatestVersion string // Latest detected semantic version tag
+}
+
+// Mismatch represents a version inconsistency between the actual and latest version of a dependency.
+type Mismatch struct {
+	Actual string
+	Latest string
 }
