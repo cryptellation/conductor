@@ -3,17 +3,20 @@ module github.com/lerenn/conductor
 go 1.23.8
 
 require (
+	dagger.io/dagger v0.18.14
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/google/go-github/v55 v55.0.0
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
+	github.com/uptrace/opentelemetry-go-extra/otelzap v0.3.2
 	go.uber.org/mock v0.5.2
+	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.25.0
 	golang.org/x/oauth2 v0.30.0
 )
 
 require (
-	dagger.io/dagger v0.18.14 // indirect
 	github.com/99designs/gqlgen v0.17.75 // indirect
 	github.com/Khan/genqlient v0.8.1 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
@@ -26,7 +29,6 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
@@ -39,11 +41,9 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/spf13/cast v1.9.2 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/uptrace/opentelemetry-go-extra/otelutil v0.3.2 // indirect
-	github.com/uptrace/opentelemetry-go-extra/otelzap v0.3.2 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.28 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel v1.36.0 // indirect
@@ -62,7 +62,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.36.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect

@@ -1,4 +1,4 @@
-//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -destination=mock_version_detection.gen.go -package=repo -source=version_detection.go VersionDetector
+//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -destination=mock_version_detection.gen.go -package=repo -source=version_detection.go VersionDetector
 
 package repo
 

@@ -11,7 +11,7 @@ import (
 
 // Dagger defines the interface for Dagger operations.
 //
-//go:generate mockgen -destination=mock_dagger.gen.go -package=dagger . Dagger
+//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -destination=mock_dagger.gen.go -package=dagger . Dagger
 type Dagger interface {
 	CloneRepo(ctx context.Context, repoURL, branch string) (*dagger.Directory, error)
 	Close() error

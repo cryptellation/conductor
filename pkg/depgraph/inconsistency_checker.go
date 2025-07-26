@@ -7,6 +7,8 @@ import (
 )
 
 // InconsistencyChecker checks for version mismatches between used and latest dependency versions in a dependency graph.
+//
+//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -destination=mock_inconsistency_checker.gen.go -package=depgraph . InconsistencyChecker
 type InconsistencyChecker interface {
 	// Check inspects the dependency graph and returns a map of service module path to dependency module path to Mismatch.
 	// Only mismatches are included in the result.

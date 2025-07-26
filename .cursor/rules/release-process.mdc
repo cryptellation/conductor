@@ -17,7 +17,7 @@ For each command below, if it fails, attempt to fix the error and re-run the com
 
 - Lint the code:  
   `dagger call lint --source-dir .`
-- Lint Dagger code:  
+- Lint Dagger code:
   `dagger call lint-dagger --source-dir=.`
 - Run unit tests:  
   `dagger call unit-tests --source-dir .`
