@@ -70,6 +70,21 @@ func (mr *MockDaggerMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDagger)(nil).Close))
 }
 
+// CommitAndPush mocks base method.
+func (m *MockDagger) CommitAndPush(ctx context.Context, dir *dagger.Directory, modulePath, targetVersion, authorName, authorEmail, repoURL string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommitAndPush", ctx, dir, modulePath, targetVersion, authorName, authorEmail, repoURL)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CommitAndPush indicates an expected call of CommitAndPush.
+func (mr *MockDaggerMockRecorder) CommitAndPush(ctx, dir, modulePath, targetVersion, authorName, authorEmail, repoURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitAndPush", reflect.TypeOf((*MockDagger)(nil).CommitAndPush), ctx, dir, modulePath, targetVersion, authorName, authorEmail, repoURL)
+}
+
 // UpdateGoDependency mocks base method.
 func (m *MockDagger) UpdateGoDependency(ctx context.Context, dir *dagger.Directory, modulePath, targetVersion string) (*dagger.Directory, error) {
 	m.ctrl.T.Helper()

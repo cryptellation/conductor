@@ -5,4 +5,9 @@ repositories:
   - name: repo1
     url: https://github.com/example/repo1.git
   - name: repo2
-    url: https://github.com/example/repo2.git 
+    url: https://github.com/example/repo2.git
+
+git:
+  author:
+    name: "Conductor Bot"
+    email: "conductor@example.com" 

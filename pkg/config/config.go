@@ -4,6 +4,15 @@ import (
 	"github.com/spf13/viper"
 )
 
+type GitAuthor struct {
+	Name  string `mapstructure:"name"`
+	Email string `mapstructure:"email"`
+}
+
+type GitConfig struct {
+	Author GitAuthor `mapstructure:"author"`
+}
+
 type Repository struct {
 	Name string `mapstructure:"name"`
 	URL  string `mapstructure:"url"`
@@ -11,6 +20,7 @@ type Repository struct {
 
 type Config struct {
 	Repositories []Repository `mapstructure:"repositories"`
+	Git          GitConfig    `mapstructure:"git"`
 }
 
 func Load(configPath string) (*Config, error) {

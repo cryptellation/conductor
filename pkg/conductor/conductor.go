@@ -121,34 +121,9 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 
 		// Update each dependency for this service
 		for dep, mismatch := range deps {
-			logger.Info("Updating dependency",
-				zap.String("service", service),
-				zap.String("dependency", dep),
-				zap.String("from", mismatch.Actual),
-				zap.String("to", mismatch.Latest))
-
-			// Clone the repo fresh for each dependency update
-			dir, err := c.dagger.CloneRepo(ctx, repoURL, "main")
-			if err != nil {
-				logger.Error("Failed to clone repo for service", zap.String("service", service), zap.Error(err))
+			if err := c.updateDependency(ctx, service, dep, mismatch, repoURL); err != nil {
 				return err
 			}
-
-			updatedDir, err := c.dagger.UpdateGoDependency(ctx, dir, dep, mismatch.Latest)
-			if err != nil {
-				logger.Error("Failed to update dependency",
-					zap.String("service", service),
-					zap.String("dependency", dep),
-					zap.Error(err))
-				return err
-			}
-
-			logger.Info("Dependency updated successfully",
-				zap.String("service", service),
-				zap.String("dependency", dep),
-				zap.String("repo_url", repoURL))
-			// Future: commit, push with updatedDir
-			_ = updatedDir // Will be used in future steps (2.1.3)
 		}
 
 		logger.Info("All dependencies processed for service",
@@ -157,6 +132,57 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 	}
 
 	logger.Info("fixModules workflow completed successfully")
+	return nil
+}
+
+// updateDependency updates a single dependency for a service.
+func (c *Conductor) updateDependency(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
+	repoURL string) error {
+	logger := logging.C(ctx)
+	logger.Info("Updating dependency",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.String("from", mismatch.Actual),
+		zap.String("to", mismatch.Latest))
+
+	// Clone the repo fresh for each dependency update
+	dir, err := c.dagger.CloneRepo(ctx, repoURL, "main")
+	if err != nil {
+		logger.Error("Failed to clone repo for service", zap.String("service", service), zap.Error(err))
+		return err
+	}
+
+	updatedDir, err := c.dagger.UpdateGoDependency(ctx, dir, dep, mismatch.Latest)
+	if err != nil {
+		logger.Error("Failed to update dependency",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Error(err))
+		return err
+	}
+
+	logger.Info("Dependency updated successfully",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.String("repo_url", repoURL))
+
+	// Commit and push the changes
+	branchName, err := c.dagger.CommitAndPush(ctx, updatedDir, dep, mismatch.Latest,
+		c.config.Git.Author.Name, c.config.Git.Author.Email, repoURL)
+	if err != nil {
+		logger.Error("Failed to commit and push changes",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Error(err))
+		return err
+	}
+
+	logger.Info("Successfully committed and pushed changes",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.String("branch_name", branchName),
+		zap.String("repo_url", repoURL))
+
 	return nil
 }
 
