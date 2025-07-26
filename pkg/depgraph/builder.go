@@ -1,4 +1,4 @@
-//go:generate go run go.uber.org/mock/mockgen@v0.2.0 -destination=mock_builder.gen.go -package=depgraph -source=builder.go GraphBuilder
+//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -destination=mock_builder.gen.go -package=depgraph -source=builder.go GraphBuilder
 package depgraph
 
 import (
