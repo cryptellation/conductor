@@ -1,9 +1,14 @@
+//go:build unit
+// +build unit
+
 package conductor
 
 import (
 	"context"
 	"testing"
 
+	"github.com/lerenn/conductor/pkg/adapters/dagger"
+	"github.com/lerenn/conductor/pkg/adapters/github"
 	"github.com/lerenn/conductor/pkg/config"
 	"github.com/lerenn/conductor/pkg/depgraph"
 	"github.com/lerenn/conductor/pkg/repo"
@@ -11,90 +16,115 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestConductor_New(t *testing.T) {
-	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
-		},
+// TestConductor contains all the mocks and the conductor instance for testing
+type TestConductor struct {
+	Conductor           *Conductor
+	MockController      *gomock.Controller
+	MockFetcher         *repo.MockFilesFetcher
+	MockGraphBuilder    *depgraph.MockGraphBuilder
+	MockVersionDetector *repo.MockVersionDetector
+	MockChecker         *depgraph.MockInconsistencyChecker
+	MockDagger          *dagger.MockDagger
+}
+
+// newTestConductor creates a TestConductor instance with all mocked dependencies
+func newTestConductor(t *testing.T, cfg *config.Config) *TestConductor {
+	ctrl := gomock.NewController(t)
+
+	// Create all mocks
+	mockFetcher := repo.NewMockFilesFetcher(ctrl)
+	mockGraphBuilder := depgraph.NewMockGraphBuilder(ctrl)
+	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
+	mockChecker := depgraph.NewMockInconsistencyChecker(ctrl)
+	mockDagger := dagger.NewMockDagger(ctrl)
+
+	// Set up default expectations
+	mockDagger.EXPECT().Close().Return(nil)
+
+	// Create Conductor directly, avoiding New() which requires Docker
+	client := github.New("test-token")
+	c := &Conductor{
+		config:          cfg,
+		client:          client,
+		fetcher:         mockFetcher,
+		graphBuilder:    mockGraphBuilder,
+		versionDetector: mockVersionDetector,
+		checker:         mockChecker,
+		dagger:          mockDagger,
 	}
 
-	c := New(cfg, "test-token")
-
-	assert.NotNil(t, c)
-	assert.Equal(t, cfg, c.config)
-	assert.NotNil(t, c.client)
-	assert.NotNil(t, c.fetcher)
+	return &TestConductor{
+		Conductor:           c,
+		MockController:      ctrl,
+		MockFetcher:         mockFetcher,
+		MockGraphBuilder:    mockGraphBuilder,
+		MockVersionDetector: mockVersionDetector,
+		MockChecker:         mockChecker,
+		MockDagger:          mockDagger,
+	}
 }
 
 func TestConductor_Run_NoRepositories(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	cfg := &config.Config{
 		Repositories: []config.Repository{},
 	}
 
-	c := New(cfg, "test-token")
-	// Replace the fetcher with a mock for testing
-	c.fetcher = repo.NewMockFilesFetcher(ctrl)
+	tc := newTestConductor(t, cfg)
+	defer tc.MockController.Finish()
+	defer tc.Conductor.Close()
 
 	ctx := context.Background()
-	err := c.Run(ctx)
+	err := tc.Conductor.Run(ctx)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no repositories configured")
 }
 
 func TestConductor_Run_WithRepositories_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	cfg := &config.Config{
 		Repositories: []config.Repository{
 			{Name: "test", URL: "https://github.com/test/repo"},
 		},
 	}
 
+	tc := newTestConductor(t, cfg)
+	defer tc.MockController.Finish()
+	defer tc.Conductor.Close()
+
 	expectedResults := map[string][]byte{
 		"go.mod": []byte("module github.com/test/repo\nrequire github.com/test/dep v1.0.0\n"),
 	}
 
-	mockFetcher := repo.NewMockFilesFetcher(ctrl)
-	mockFetcher.EXPECT().
+	tc.MockFetcher.EXPECT().
 		Fetch(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(expectedResults, nil)
 
-	mockGraphBuilder := depgraph.NewMockGraphBuilder(ctrl)
 	mockGraph := map[string]*depgraph.Service{
 		"github.com/test/repo": {
 			ModulePath:   "github.com/test/repo",
 			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}
-	mockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
+	tc.MockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
 
-	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
-	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
+	tc.MockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
 
-	mockChecker := depgraph.NewMockInconsistencyChecker(ctrl)
-	mockChecker.EXPECT().Check(mockGraph).Return(map[string]map[string]depgraph.Mismatch{}, nil)
+	mismatches := map[string]map[string]depgraph.Mismatch{
+		"github.com/test/repo": {
+			"github.com/test/dep": {Actual: "v1.0.0", Latest: "v1.1.0"},
+		},
+	}
+	tc.MockChecker.EXPECT().Check(mockGraph).Return(mismatches, nil)
 
-	c := New(cfg, "test-token")
-	c.fetcher = mockFetcher
-	c.graphBuilder = mockGraphBuilder
-	c.versionDetector = mockVersionDetector
-	c.checker = mockChecker
+	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
 
 	ctx := context.Background()
-	err := c.Run(ctx)
+	err := tc.Conductor.Run(ctx)
 
 	assert.NoError(t, err)
 }
 
 func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	cfg := &config.Config{
 		Repositories: []config.Repository{
 			{Name: "repo1", URL: "https://github.com/test/repo1"},
@@ -102,15 +132,17 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 		},
 	}
 
-	mockFetcher := repo.NewMockFilesFetcher(ctrl)
-	mockFetcher.EXPECT().
+	tc := newTestConductor(t, cfg)
+	defer tc.MockController.Finish()
+	defer tc.Conductor.Close()
+
+	tc.MockFetcher.EXPECT().
 		Fetch(gomock.Any(), "https://github.com/test/repo1", "main", "go.mod").
 		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo1")}, nil)
-	mockFetcher.EXPECT().
+	tc.MockFetcher.EXPECT().
 		Fetch(gomock.Any(), "https://github.com/test/repo2", "main", "go.mod").
 		Return(map[string][]byte{"go.mod": []byte("module github.com/test/repo2")}, nil)
 
-	mockGraphBuilder := depgraph.NewMockGraphBuilder(ctrl)
 	mockGraph := map[string]*depgraph.Service{
 		"github.com/test/repo1": {
 			ModulePath:   "github.com/test/repo1",
@@ -121,47 +153,35 @@ func TestConductor_Run_WithMultipleRepositories_Success(t *testing.T) {
 			Dependencies: map[string]depgraph.Dependency{},
 		},
 	}
-	mockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
+	tc.MockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
 
-	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
-	mockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
+	tc.MockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
 
-	mockChecker := depgraph.NewMockInconsistencyChecker(ctrl)
-	mockChecker.EXPECT().Check(mockGraph).Return(map[string]map[string]depgraph.Mismatch{}, nil)
-
-	c := New(cfg, "test-token")
-	c.fetcher = mockFetcher
-	c.graphBuilder = mockGraphBuilder
-	c.versionDetector = mockVersionDetector
-	c.checker = mockChecker
+	tc.MockChecker.EXPECT().Check(mockGraph).Return(map[string]map[string]depgraph.Mismatch{}, nil)
 
 	ctx := context.Background()
-	err := c.Run(ctx)
+	err := tc.Conductor.Run(ctx)
 
 	assert.NoError(t, err)
 }
 
 func TestConductor_Run_WithRepositories_FetchError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	cfg := &config.Config{
 		Repositories: []config.Repository{
 			{Name: "test", URL: "https://github.com/test/repo"},
 		},
 	}
 
-	mockFetcher := repo.NewMockFilesFetcher(ctrl)
-	mockFetcher.EXPECT().
+	tc := newTestConductor(t, cfg)
+	defer tc.MockController.Finish()
+	defer tc.Conductor.Close()
+
+	tc.MockFetcher.EXPECT().
 		Fetch(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
 		Return(nil, assert.AnError)
 
-	c := New(cfg, "test-token")
-	// Replace the fetcher with a mock for testing
-	c.fetcher = mockFetcher
-
 	ctx := context.Background()
-	err := c.Run(ctx)
+	err := tc.Conductor.Run(ctx)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error fetching go.mod")

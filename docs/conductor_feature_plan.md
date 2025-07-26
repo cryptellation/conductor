@@ -65,11 +65,27 @@ This document outlines the actionable development plan for the Conductor tool. O
 
 ## 2. Automated Merge Requests
 
-- **2.1. Repository Authentication & API Integration**
-  - 2.1.1 Integrate with GitHub (and/or other platforms) for API access.
-    - Status: 
-  - 2.1.2 Handle authentication and permissions.
-    - Status: 
+- **2.1. Dagger workflow**
+  - 2.1.1 Implement a way to git clone a project with Dagger
+    - Status: in progress
+    - Implementation clarifications (2024-06-12):
+      - Implement as a Go function in `/pkg/dagger` (not as a Dagger module).
+      - The function should use the Dagger Go SDK to perform a shallow git clone of a given repository URL.
+      - The function signature should return a Dagger Directory (`*dagger.Directory`) for chaining with other Dagger steps.
+      - The branch to clone should default to "main" but be defined as a constant in `/pkg/dagger` for easy future changes.
+      - Use the `GITHUB_TOKEN` provided to Conductor for authentication (supporting private repos). The token should be passed explicitly to the workflow and set as a Dagger secret if possible.
+      - The function should fail fast on any error.
+      - The function should log progress using the same logger as the rest of Conductor (e.g., zap). Only Conductor logs should be shown; Dagger-internal logs should be suppressed or not shown to the user.
+      - No submodules required for now.
+      - The function should be designed for integration into the Conductor workflow, not as a standalone CLI or Dagger module.
+      - The cloned directory should be accessible for subsequent Dagger steps (e.g., updating dependencies, committing, pushing).
+      - No special Git version or features required.
+      - No need to export the directory to the host filesystem unless required by later steps.
+      - Do not modify or touch any existing Dagger modules.
+      - The `CloneRepo` function should be part of an `UpdateDependencyWorkflow` function in `/pkg/dagger`, which will also include steps for 2.2 and 2.3 in the future.
+      - The `UpdateDependencyWorkflow` should accept the mismatches from `conductor.go` (type: `map[string]map[string]depgraph.Mismatch`) and a context for logging, and will be called from there.
+  - 2.1.2 Implement a way to update a go dependency in the cloned project using Dagger
+  - 2.1.3 Implement a way to commit and push the change to a new branch using Dagger and the same image as 2.1.1
 
 - **2.2. MR Creation Logic**
   - 2.2.1 Implement logic to create merge requests in affected repositories.
