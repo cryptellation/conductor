@@ -41,6 +41,21 @@ func (m *MockDagger) EXPECT() *MockDaggerMockRecorder {
 	return m.recorder
 }
 
+// CheckBranchExists mocks base method.
+func (m *MockDagger) CheckBranchExists(ctx context.Context, params CheckBranchExistsParams) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckBranchExists", ctx, params)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckBranchExists indicates an expected call of CheckBranchExists.
+func (mr *MockDaggerMockRecorder) CheckBranchExists(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckBranchExists", reflect.TypeOf((*MockDagger)(nil).CheckBranchExists), ctx, params)
+}
+
 // CloneRepo mocks base method.
 func (m *MockDagger) CloneRepo(ctx context.Context, repoURL, branch string) (*dagger.Directory, error) {
 	m.ctrl.T.Helper()
@@ -71,31 +86,31 @@ func (mr *MockDaggerMockRecorder) Close() *gomock.Call {
 }
 
 // CommitAndPush mocks base method.
-func (m *MockDagger) CommitAndPush(ctx context.Context, dir *dagger.Directory, modulePath, targetVersion, authorName, authorEmail, repoURL string) (string, error) {
+func (m *MockDagger) CommitAndPush(ctx context.Context, params CommitAndPushParams) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CommitAndPush", ctx, dir, modulePath, targetVersion, authorName, authorEmail, repoURL)
+	ret := m.ctrl.Call(m, "CommitAndPush", ctx, params)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CommitAndPush indicates an expected call of CommitAndPush.
-func (mr *MockDaggerMockRecorder) CommitAndPush(ctx, dir, modulePath, targetVersion, authorName, authorEmail, repoURL any) *gomock.Call {
+func (mr *MockDaggerMockRecorder) CommitAndPush(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitAndPush", reflect.TypeOf((*MockDagger)(nil).CommitAndPush), ctx, dir, modulePath, targetVersion, authorName, authorEmail, repoURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitAndPush", reflect.TypeOf((*MockDagger)(nil).CommitAndPush), ctx, params)
 }
 
 // UpdateGoDependency mocks base method.
-func (m *MockDagger) UpdateGoDependency(ctx context.Context, dir *dagger.Directory, modulePath, targetVersion string) (*dagger.Directory, error) {
+func (m *MockDagger) UpdateGoDependency(ctx context.Context, params UpdateGoDependencyParams) (*dagger.Directory, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateGoDependency", ctx, dir, modulePath, targetVersion)
+	ret := m.ctrl.Call(m, "UpdateGoDependency", ctx, params)
 	ret0, _ := ret[0].(*dagger.Directory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateGoDependency indicates an expected call of UpdateGoDependency.
-func (mr *MockDaggerMockRecorder) UpdateGoDependency(ctx, dir, modulePath, targetVersion any) *gomock.Call {
+func (mr *MockDaggerMockRecorder) UpdateGoDependency(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGoDependency", reflect.TypeOf((*MockDagger)(nil).UpdateGoDependency), ctx, dir, modulePath, targetVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGoDependency", reflect.TypeOf((*MockDagger)(nil).UpdateGoDependency), ctx, params)
 }

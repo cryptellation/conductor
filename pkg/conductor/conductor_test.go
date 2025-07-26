@@ -123,8 +123,25 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 	tc.MockChecker.EXPECT().Check(mockGraph).Return(mismatches, nil)
 
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
-	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), gomock.Any(), "github.com/test/dep", "v1.1.0").Return(nil, nil)
-	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), gomock.Any(), "github.com/test/dep", "v1.1.0", "Conductor Bot", "conductor@example.com", "https://github.com/test/repo").Return("conductor/update-github.com-test-dep-v1.1.0", nil)
+	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		RepoURL:       "https://github.com/test/repo",
+	}).Return(false, nil)
+	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), dagger.UpdateGoDependencyParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+	}).Return(nil, nil)
+	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		AuthorName:    "Conductor Bot",
+		AuthorEmail:   "conductor@example.com",
+		RepoURL:       "https://github.com/test/repo",
+	}).Return("conductor/update-github.com-test-dep-v1.1.0", nil)
 
 	ctx := context.Background()
 	err := tc.Conductor.Run(ctx)
@@ -232,7 +249,126 @@ func TestConductor_Run_WithRepositories_DependencyUpdateError(t *testing.T) {
 	tc.MockChecker.EXPECT().Check(mockGraph).Return(mismatches, nil)
 
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
-	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), gomock.Any(), "github.com/test/dep", "v1.1.0").Return(nil, assert.AnError)
+	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		RepoURL:       "https://github.com/test/repo",
+	}).Return(false, nil)
+	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), dagger.UpdateGoDependencyParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+	}).Return(nil, assert.AnError)
+
+	ctx := context.Background()
+	err := tc.Conductor.Run(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to fix modules")
+}
+
+func TestConductor_Run_WithRepositories_BranchExists(t *testing.T) {
+	cfg := &config.Config{
+		Repositories: []config.Repository{
+			{Name: "test", URL: "https://github.com/test/repo"},
+		},
+		Git: config.GitConfig{
+			Author: config.GitAuthor{
+				Name:  "Conductor Bot",
+				Email: "conductor@example.com",
+			},
+		},
+	}
+
+	tc := newTestConductor(t, cfg)
+	defer tc.MockController.Finish()
+	defer tc.Conductor.Close()
+
+	expectedResults := map[string][]byte{
+		"go.mod": []byte("module github.com/test/repo\nrequire github.com/test/dep v1.0.0\n"),
+	}
+
+	tc.MockFetcher.EXPECT().
+		Fetch(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
+		Return(expectedResults, nil)
+
+	mockGraph := map[string]*depgraph.Service{
+		"github.com/test/repo": {
+			ModulePath:   "github.com/test/repo",
+			Dependencies: map[string]depgraph.Dependency{},
+		},
+	}
+	tc.MockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
+
+	tc.MockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
+
+	mismatches := map[string]map[string]depgraph.Mismatch{
+		"github.com/test/repo": {
+			"github.com/test/dep": {Actual: "v1.0.0", Latest: "v1.1.0"},
+		},
+	}
+	tc.MockChecker.EXPECT().Check(mockGraph).Return(mismatches, nil)
+
+	// Branch exists, so skip the dependency update
+	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
+	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		RepoURL:       "https://github.com/test/repo",
+	}).Return(true, nil)
+	// No UpdateGoDependency or CommitAndPush calls expected since branch exists
+
+	ctx := context.Background()
+	err := tc.Conductor.Run(ctx)
+
+	assert.NoError(t, err)
+}
+
+func TestConductor_Run_WithRepositories_CheckBranchExistsError(t *testing.T) {
+	cfg := &config.Config{
+		Repositories: []config.Repository{
+			{Name: "test", URL: "https://github.com/test/repo"},
+		},
+	}
+
+	tc := newTestConductor(t, cfg)
+	defer tc.MockController.Finish()
+	defer tc.Conductor.Close()
+
+	expectedResults := map[string][]byte{
+		"go.mod": []byte("module github.com/test/repo\nrequire github.com/test/dep v1.0.0\n"),
+	}
+
+	tc.MockFetcher.EXPECT().
+		Fetch(gomock.Any(), "https://github.com/test/repo", "main", "go.mod").
+		Return(expectedResults, nil)
+
+	mockGraph := map[string]*depgraph.Service{
+		"github.com/test/repo": {
+			ModulePath:   "github.com/test/repo",
+			Dependencies: map[string]depgraph.Dependency{},
+		},
+	}
+	tc.MockGraphBuilder.EXPECT().BuildGraph(gomock.Any()).Return(mockGraph, nil)
+
+	tc.MockVersionDetector.EXPECT().DetectAndSetCurrentVersions(gomock.Any(), gomock.Any(), mockGraph).Return(nil)
+
+	mismatches := map[string]map[string]depgraph.Mismatch{
+		"github.com/test/repo": {
+			"github.com/test/dep": {Actual: "v1.0.0", Latest: "v1.1.0"},
+		},
+	}
+	tc.MockChecker.EXPECT().Check(mockGraph).Return(mismatches, nil)
+
+	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
+	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		RepoURL:       "https://github.com/test/repo",
+	}).Return(false, assert.AnError)
 
 	ctx := context.Background()
 	err := tc.Conductor.Run(ctx)
@@ -284,8 +420,25 @@ func TestConductor_Run_WithRepositories_CommitAndPushError(t *testing.T) {
 	tc.MockChecker.EXPECT().Check(mockGraph).Return(mismatches, nil)
 
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
-	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), gomock.Any(), "github.com/test/dep", "v1.1.0").Return(nil, nil)
-	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), gomock.Any(), "github.com/test/dep", "v1.1.0", "Conductor Bot", "conductor@example.com", "https://github.com/test/repo").Return("", assert.AnError)
+	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		RepoURL:       "https://github.com/test/repo",
+	}).Return(false, nil)
+	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), dagger.UpdateGoDependencyParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+	}).Return(nil, nil)
+	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
+		Dir:           nil,
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		AuthorName:    "Conductor Bot",
+		AuthorEmail:   "conductor@example.com",
+		RepoURL:       "https://github.com/test/repo",
+	}).Return("", assert.AnError)
 
 	ctx := context.Background()
 	err := tc.Conductor.Run(ctx)
