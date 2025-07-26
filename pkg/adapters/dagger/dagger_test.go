@@ -96,3 +96,11 @@ func TestDagger_UpdateGoDependency_PublicRepo(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, entries, "go.mod")
 }
+
+func TestDagger_CommitAndPush(t *testing.T) {
+	// TODO: Implement integration test for CommitAndPush functionality
+	// This test would verify that the CommitAndPush method works correctly
+	// with real repositories, but it's complex to test due to permissions
+	// and the need for actual git operations.
+	t.Skip("TODO: Implement CommitAndPush integration test")
+}
