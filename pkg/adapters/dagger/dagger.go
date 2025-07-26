@@ -14,6 +14,8 @@ import (
 //go:generate go run go.uber.org/mock/mockgen@v0.5.2 -destination=mock_dagger.gen.go -package=dagger . Dagger
 type Dagger interface {
 	CloneRepo(ctx context.Context, repoURL, branch string) (*dagger.Directory, error)
+	UpdateGoDependency(ctx context.Context, dir *dagger.Directory, modulePath,
+		targetVersion string) (*dagger.Directory, error)
 	Close() error
 }
 
@@ -70,4 +72,50 @@ func (d *daggerAdapter) CloneRepo(ctx context.Context, repoURL, branch string) (
 	}
 	logger.Info("Repository cloned", zap.Strings("files", entries))
 	return dir, nil
+}
+
+// UpdateGoDependency updates a Go dependency in the given directory to the specified version.
+func (d *daggerAdapter) UpdateGoDependency(ctx context.Context, dir *dagger.Directory,
+	modulePath, targetVersion string) (*dagger.Directory, error) {
+	logger := logging.C(ctx)
+	logger.Info("Updating Go dependency",
+		zap.String("module_path", modulePath),
+		zap.String("target_version", targetVersion))
+
+	// Use a Go container to perform the dependency update
+	container := d.client.Container().From("golang:1.24-alpine").
+		WithMountedDirectory("/repo", dir).
+		WithWorkdir("/repo").
+		WithExec([]string{"go", "get", fmt.Sprintf("%s@%s", modulePath, targetVersion)})
+
+	// Get the updated directory
+	updatedDir := container.Directory("/repo")
+
+	// Check if the update was successful by verifying the go.mod file exists
+	entries, err := updatedDir.Entries(ctx)
+	if err != nil {
+		logger.Error("Failed to update dependency", zap.Error(err))
+		return nil, fmt.Errorf("failed to update dependency: %w", err)
+	}
+
+	// Verify go.mod still exists
+	if !contains(entries, "go.mod") {
+		logger.Error("go.mod file not found after dependency update")
+		return nil, fmt.Errorf("go.mod file not found after dependency update")
+	}
+
+	logger.Info("Dependency updated successfully",
+		zap.String("module_path", modulePath),
+		zap.String("target_version", targetVersion))
+	return updatedDir, nil
+}
+
+// contains checks if a slice contains a specific string.
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

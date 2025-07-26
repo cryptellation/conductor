@@ -85,6 +85,22 @@ This document outlines the actionable development plan for the Conductor tool. O
       - The `CloneRepo` function should be part of an `UpdateDependencyWorkflow` function in `/pkg/dagger`, which will also include steps for 2.2 and 2.3 in the future.
       - The `UpdateDependencyWorkflow` should accept the mismatches from `conductor.go` (type: `map[string]map[string]depgraph.Mismatch`) and a context for logging, and will be called from there.
   - 2.1.2 Implement a way to update a go dependency in the cloned project using Dagger
+    - Status: done
+    - Implementation clarifications (2024-12-19):
+      - Implement as a new method on the existing Dagger interface in `/pkg/adapters/dagger`.
+      - The function should use `go get` to update a single dependency to a specific version.
+      - Function signature: `UpdateGoDependency(ctx context.Context, dir *dagger.Directory, modulePath, targetVersion string) (*dagger.Directory, error)` where modulePath and targetVersion are passed separately.
+      - The function should use `github.com/Masterminds/semver/v3` for version parsing but no validation is needed (version validation already done in step 1).
+      - The function should use `go get module@version` format (e.g., `go get github.com/test/dep@v1.1.0`) from the root of the cloned repository.
+      - The function should fail fast on any error without special handling (just return the error).
+      - The function should capture and log the output of the `go get` command to avoid showing Dagger-internal logs.
+      - The function should return the updated directory for chaining with subsequent Dagger steps.
+      - The function should log progress using the same logger as the rest of Conductor.
+      - The function should be called from the existing `fixModules` method in `conductor.go` for each dependency mismatch.
+      - The function should be part of the `UpdateDependencyWorkflow` function (future integration with 2.1.3).
+      - Unit tests should be added to `conductor_test.go` with mocks.
+      - Integration tests should be added to `dagger_test.go` with real public repositories and verify go.mod file updates.
+      - No `go mod tidy` required - just update the single dependency.
   - 2.1.3 Implement a way to commit and push the change to a new branch using Dagger and the same image as 2.1.1
 
 - **2.2. MR Creation Logic**

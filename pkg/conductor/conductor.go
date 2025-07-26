@@ -111,7 +111,7 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 	logger := logging.C(ctx)
 	logger.Info("Starting fixModules workflow", zap.Int("service_count", len(mismatches)))
 
-	// Iterate mismatches and clone each repo (future: update, commit, push)
+	// Iterate mismatches and clone each repo for each dependency update
 	for service, deps := range mismatches {
 		logger.Info("Processing service", zap.String("service", service))
 
@@ -119,17 +119,41 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 		// Format: github.com/x/y -> https://github.com/x/y
 		repoURL := "https://" + service
 
-		dir, err := c.dagger.CloneRepo(ctx, repoURL, "main")
-		if err != nil {
-			logger.Error("Failed to clone repo for service", zap.String("service", service), zap.Error(err))
-			return err
+		// Update each dependency for this service
+		for dep, mismatch := range deps {
+			logger.Info("Updating dependency",
+				zap.String("service", service),
+				zap.String("dependency", dep),
+				zap.String("from", mismatch.Actual),
+				zap.String("to", mismatch.Latest))
+
+			// Clone the repo fresh for each dependency update
+			dir, err := c.dagger.CloneRepo(ctx, repoURL, "main")
+			if err != nil {
+				logger.Error("Failed to clone repo for service", zap.String("service", service), zap.Error(err))
+				return err
+			}
+
+			updatedDir, err := c.dagger.UpdateGoDependency(ctx, dir, dep, mismatch.Latest)
+			if err != nil {
+				logger.Error("Failed to update dependency",
+					zap.String("service", service),
+					zap.String("dependency", dep),
+					zap.Error(err))
+				return err
+			}
+
+			logger.Info("Dependency updated successfully",
+				zap.String("service", service),
+				zap.String("dependency", dep),
+				zap.String("repo_url", repoURL))
+			// Future: commit, push with updatedDir
+			_ = updatedDir // Will be used in future steps (2.1.3)
 		}
-		logger.Info("Cloned directory ready for next steps",
+
+		logger.Info("All dependencies processed for service",
 			zap.String("service", service),
-			zap.String("repo_url", repoURL),
-			zap.Any("deps", deps),
-			zap.Any("dir", dir))
-		// Future: update dependency, commit, push
+			zap.String("repo_url", repoURL))
 	}
 
 	logger.Info("fixModules workflow completed successfully")
