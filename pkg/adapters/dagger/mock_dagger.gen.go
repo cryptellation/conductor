@@ -69,3 +69,18 @@ func (mr *MockDaggerMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDagger)(nil).Close))
 }
+
+// UpdateGoDependency mocks base method.
+func (m *MockDagger) UpdateGoDependency(ctx context.Context, dir *dagger.Directory, modulePath, targetVersion string) (*dagger.Directory, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateGoDependency", ctx, dir, modulePath, targetVersion)
+	ret0, _ := ret[0].(*dagger.Directory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateGoDependency indicates an expected call of UpdateGoDependency.
+func (mr *MockDaggerMockRecorder) UpdateGoDependency(ctx, dir, modulePath, targetVersion any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGoDependency", reflect.TypeOf((*MockDagger)(nil).UpdateGoDependency), ctx, dir, modulePath, targetVersion)
+}
