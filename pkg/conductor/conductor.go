@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/lerenn/conductor/pkg/adapters/dagger"
 	"github.com/lerenn/conductor/pkg/adapters/github"
 	"github.com/lerenn/conductor/pkg/config"
 	"github.com/lerenn/conductor/pkg/depgraph"
@@ -22,11 +23,20 @@ type Conductor struct {
 	graphBuilder    depgraph.GraphBuilder
 	versionDetector repo.VersionDetector
 	checker         depgraph.InconsistencyChecker
+	dagger          dagger.Dagger
 }
 
 // New creates a new Conductor instance with the given configuration and GitHub token.
-func New(cfg *config.Config, token string) *Conductor {
+func New(cfg *config.Config, token string) (*Conductor, error) {
 	client := github.New(token)
+
+	// Create dagger adapter with context
+	ctx := context.Background()
+	daggerAdapter, err := dagger.NewDagger(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dagger adapter: %w", err)
+	}
+
 	return &Conductor{
 		config:          cfg,
 		client:          client,
@@ -34,7 +44,16 @@ func New(cfg *config.Config, token string) *Conductor {
 		graphBuilder:    depgraph.NewGraphBuilder(),
 		versionDetector: repo.NewVersionDetector(),
 		checker:         depgraph.NewInconsistencyChecker(),
+		dagger:          daggerAdapter,
+	}, nil
+}
+
+// Close closes the Conductor and its resources.
+func (c *Conductor) Close() error {
+	if c.dagger != nil {
+		return c.dagger.Close()
 	}
+	return nil
 }
 
 // Run executes the main conductor workflow, fetching files from configured repositories.
@@ -65,20 +84,55 @@ func (c *Conductor) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to check for inconsistencies: %w", err)
 	}
-	if len(mismatches) > 0 {
-		logging.C(ctx).Warn("Version inconsistencies detected")
-		for svc, deps := range mismatches {
-			for dep, mismatch := range deps {
-				logging.C(ctx).Warn("Dependency version mismatch",
-					zap.String("service", svc),
-					zap.String("dependency", dep),
-					zap.String("actual", mismatch.Actual),
-					zap.String("latest", mismatch.Latest),
-				)
-			}
+	if len(mismatches) == 0 {
+		return nil
+	}
+	logging.C(ctx).Warn("Version inconsistencies detected")
+	for svc, deps := range mismatches {
+		for dep, mismatch := range deps {
+			logging.C(ctx).Warn("Dependency version mismatch",
+				zap.String("service", svc),
+				zap.String("dependency", dep),
+				zap.String("actual", mismatch.Actual),
+				zap.String("latest", mismatch.Latest),
+			)
 		}
 	}
+	// Call the fixModules method to handle dependency updates
+	if err := c.fixModules(ctx, mismatches); err != nil {
+		return fmt.Errorf("failed to fix modules: %w", err)
+	}
 
+	return nil
+}
+
+// fixModules handles the dependency update workflow using the Dagger adapter.
+func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[string]depgraph.Mismatch) error {
+	logger := logging.C(ctx)
+	logger.Info("Starting fixModules workflow", zap.Int("service_count", len(mismatches)))
+
+	// Iterate mismatches and clone each repo (future: update, commit, push)
+	for service, deps := range mismatches {
+		logger.Info("Processing service", zap.String("service", service))
+
+		// Convert Go module path to GitHub URL
+		// Format: github.com/x/y -> https://github.com/x/y
+		repoURL := "https://" + service
+
+		dir, err := c.dagger.CloneRepo(ctx, repoURL, "main")
+		if err != nil {
+			logger.Error("Failed to clone repo for service", zap.String("service", service), zap.Error(err))
+			return err
+		}
+		logger.Info("Cloned directory ready for next steps",
+			zap.String("service", service),
+			zap.String("repo_url", repoURL),
+			zap.Any("deps", deps),
+			zap.Any("dir", dir))
+		// Future: update dependency, commit, push
+	}
+
+	logger.Info("fixModules workflow completed successfully")
 	return nil
 }
 

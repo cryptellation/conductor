@@ -30,12 +30,12 @@ func withGoCodeAndCacheAsWorkDirectory(c *dagger.Container, sourceDir *dagger.Di
 		WithWorkdir(containerPath)
 }
 
-// IntegrationTests runs all Go tests in pkg/adapters/.
+// IntegrationTests runs all Go tests in pkg/adapters/ with the integration build tag.
 func (m *Conductor) IntegrationTests(sourceDir *dagger.Directory, githubToken *dagger.Secret) *dagger.Container {
 	c := dag.Container().From("golang:1.24")
 	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
 	c = c.WithSecretVariable("GITHUB_TOKEN", githubToken)
-	return c.WithExec([]string{"go", "test", "./pkg/adapters/...", "-v"})
+	return c.WithExec([]string{"go", "test", "-tags=integration", "./pkg/adapters/...", "-v"})
 }
 
 // Lint runs golangci-lint on the main repo (./...) only.
@@ -68,11 +68,11 @@ func (m *Conductor) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 	return c
 }
 
-// UnitTests runs all Go unit tests in pkg/ (excluding adapters/).
+// UnitTests runs all Go unit tests in pkg/ (excluding adapters/) with the unit build tag.
 func (m *Conductor) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:1.24")
 	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
-	return c.WithExec([]string{"go", "test", "./pkg/...", "-v"})
+	return c.WithExec([]string{"go", "test", "-tags=unit", "./pkg/...", "-v"})
 }
 
 // Generate runs 'go generate ./...' and then 'sh scripts/check-generation.sh' in the repo.

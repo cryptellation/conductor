@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package github
 
 import (
@@ -9,7 +12,7 @@ import (
 func TestGetFileContent(t *testing.T) {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		t.Skip("GITHUB_TOKEN not set; skipping integration test.")
+		t.Fatal("GITHUB_TOKEN not set; required for integration test.")
 	}
 
 	client := New(token)
@@ -32,7 +35,7 @@ func TestGetFileContent(t *testing.T) {
 func TestListTags(t *testing.T) {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		t.Skip("GITHUB_TOKEN not set; skipping integration test.")
+		t.Fatal("GITHUB_TOKEN not set; required for integration test.")
 	}
 
 	client := New(token)

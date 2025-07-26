@@ -30,7 +30,11 @@ func main() {
 				logging.L().Fatal("GITHUB_TOKEN environment variable is not set")
 			}
 
-			c := conductor.New(cfg, token)
+			c, err := conductor.New(cfg, token)
+			if err != nil {
+				logging.L().Fatal("Failed to create conductor", zap.Error(err))
+			}
+			defer c.Close()
 
 			ctx := context.Background()
 			c.RunWithLogging(ctx)
