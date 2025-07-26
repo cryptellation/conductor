@@ -84,7 +84,11 @@ func TestDagger_UpdateGoDependency_PublicRepo(t *testing.T) {
 	modulePath := "github.com/stretchr/testify"
 	targetVersion := "v1.8.4"
 
-	updatedDir, err := daggerAdapter.UpdateGoDependency(ctx, dir, modulePath, targetVersion)
+	updatedDir, err := daggerAdapter.UpdateGoDependency(ctx, UpdateGoDependencyParams{
+		Dir:           dir,
+		ModulePath:    modulePath,
+		TargetVersion: targetVersion,
+	})
 	if err != nil {
 		// This is expected if the repo doesn't have a go.mod file
 		t.Logf("UpdateGoDependency failed as expected (repo may not have go.mod): %v", err)
@@ -103,4 +107,70 @@ func TestDagger_CommitAndPush(t *testing.T) {
 	// with real repositories, but it's complex to test due to permissions
 	// and the need for actual git operations.
 	t.Skip("TODO: Implement CommitAndPush integration test")
+}
+
+func TestDagger_CheckBranchExists_NonExistingBranch(t *testing.T) {
+	ctx := context.Background()
+	githubToken := os.Getenv("GITHUB_TOKEN") // or "" for public
+
+	daggerAdapter, err := NewDagger(ctx, githubToken)
+	if err != nil {
+		// If Dagger connection fails, skip the test
+		t.Skipf("Skipping test - Dagger connection failed: %v", err)
+	}
+	defer daggerAdapter.Close()
+
+	// Use a public repo
+	repoURL := "https://github.com/octocat/Hello-World"
+	branch := "master"
+
+	// First clone the repo
+	dir, err := daggerAdapter.CloneRepo(ctx, repoURL, branch)
+	require.NoError(t, err)
+
+	// Check for a non-existing branch
+	modulePath := "github.com/test/dep"
+	targetVersion := "v1.1.0"
+
+	exists, err := daggerAdapter.CheckBranchExists(ctx, CheckBranchExistsParams{
+		Dir:           dir,
+		ModulePath:    modulePath,
+		TargetVersion: targetVersion,
+		RepoURL:       repoURL,
+	})
+	require.NoError(t, err)
+	assert.False(t, exists, "Branch should not exist")
+}
+
+func TestDagger_CheckBranchExists_ExistingBranch(t *testing.T) {
+	ctx := context.Background()
+	githubToken := os.Getenv("GITHUB_TOKEN") // or "" for public
+
+	daggerAdapter, err := NewDagger(ctx, githubToken)
+	if err != nil {
+		// If Dagger connection fails, skip the test
+		t.Skipf("Skipping test - Dagger connection failed: %v", err)
+	}
+	defer daggerAdapter.Close()
+
+	// Use a public repo
+	repoURL := "https://github.com/octocat/Hello-World"
+	branch := "master"
+
+	// First clone the repo
+	dir, err := daggerAdapter.CloneRepo(ctx, repoURL, branch)
+	require.NoError(t, err)
+
+	// Check for an existing branch (master branch should exist)
+	modulePath := "github.com/test/dep"
+	targetVersion := "master" // This will create a branch name that matches the existing master branch
+
+	exists, err := daggerAdapter.CheckBranchExists(ctx, CheckBranchExistsParams{
+		Dir:           dir,
+		ModulePath:    modulePath,
+		TargetVersion: targetVersion,
+		RepoURL:       repoURL,
+	})
+	require.NoError(t, err)
+	assert.True(t, exists, "Branch should exist")
 }

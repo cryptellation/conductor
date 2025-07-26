@@ -128,6 +128,27 @@ This document outlines the actionable development plan for the Conductor tool. O
       - Unit tests should be added to `conductor_test.go` with mocks.
       - Integration tests should be added to `dagger_test.go` with real public repositories and verify branch creation and push.
       - The function should configure git user.name and user.email before committing using the config values.
+  - 2.1.4: Implement a way, with the cloning in Dagger (right after that), to check if the future
+      created branch already exists.
+    - Status: done
+    - Implementation clarifications (2024-12-19):
+      - Implement as a new method on the existing Dagger interface in `/pkg/adapters/dagger`.
+      - Function signature: `CheckBranchExists(ctx context.Context, dir *dagger.Directory, modulePath, targetVersion, repoURL string) (bool, error)`.
+      - The check should happen right after `CloneRepo` but before `UpdateGoDependency` for efficiency.
+      - Use the same branch naming convention as `CommitAndPush`: `conductor/update-<dependency>-<version>`.
+      - Use the same GitHub token for authentication as cloning.
+      - Return a boolean indicating if the branch exists (true = exists, false = doesn't exist).
+      - If the branch exists, log a warning and skip to the next dependency (don't fail fast).
+      - The function should be called from the `updateDependency` method in `conductor.go` right after the clone.
+      - Use the same `alpine/git` image for consistency with other git operations.
+      - The function should log progress using the same logger as the rest of Conductor.
+      - Use `git ls-remote --heads origin <branch-name>` to check if the branch exists remotely.
+      - Determine branch existence by checking if the command output is empty (empty = branch doesn't exist, non-empty = branch exists).
+      - Fail fast on any git operation errors (exit code != 0) as these indicate network issues, authentication problems, etc.
+      - When logging that a branch exists, include service, dependency, version information, and repository URL.
+      - In `updateDependency` method: call `CheckBranchExists` right after `CloneRepo`, if branch exists log warning and return `nil` (skip dependency), if branch doesn't exist continue with `UpdateGoDependency` and `CommitAndPush`.
+      - Unit tests should be added to `conductor_test.go` with mocks.
+      - Integration tests should be added to `dagger_test.go` with real public repositories: one test checking an existing branch and another checking a non-existing branch.
 
 - **2.2. MR Creation Logic**
   - 2.2.1 Implement logic to create merge requests in affected repositories.

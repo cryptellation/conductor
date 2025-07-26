@@ -136,6 +136,8 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 }
 
 // updateDependency updates a single dependency for a service.
+//
+//nolint:funlen // This function orchestrates a complex workflow that's difficult to break down further
 func (c *Conductor) updateDependency(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
 	repoURL string) error {
 	logger := logging.C(ctx)
@@ -152,7 +154,36 @@ func (c *Conductor) updateDependency(ctx context.Context, service, dep string, m
 		return err
 	}
 
-	updatedDir, err := c.dagger.UpdateGoDependency(ctx, dir, dep, mismatch.Latest)
+	// Check if the branch already exists
+	branchExists, err := c.dagger.CheckBranchExists(ctx, dagger.CheckBranchExistsParams{
+		Dir:           dir,
+		ModulePath:    dep,
+		TargetVersion: mismatch.Latest,
+		RepoURL:       repoURL,
+	})
+	if err != nil {
+		logger.Error("Failed to check branch existence",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Error(err))
+		return err
+	}
+
+	// If branch exists, skip this dependency
+	if branchExists {
+		logger.Warn("Branch already exists, skipping dependency update",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.String("target_version", mismatch.Latest))
+		return nil
+	}
+
+	// Update the dependency
+	updatedDir, err := c.dagger.UpdateGoDependency(ctx, dagger.UpdateGoDependencyParams{
+		Dir:           dir,
+		ModulePath:    dep,
+		TargetVersion: mismatch.Latest,
+	})
 	if err != nil {
 		logger.Error("Failed to update dependency",
 			zap.String("service", service),
@@ -167,8 +198,14 @@ func (c *Conductor) updateDependency(ctx context.Context, service, dep string, m
 		zap.String("repo_url", repoURL))
 
 	// Commit and push the changes
-	branchName, err := c.dagger.CommitAndPush(ctx, updatedDir, dep, mismatch.Latest,
-		c.config.Git.Author.Name, c.config.Git.Author.Email, repoURL)
+	branchName, err := c.dagger.CommitAndPush(ctx, dagger.CommitAndPushParams{
+		Dir:           updatedDir,
+		ModulePath:    dep,
+		TargetVersion: mismatch.Latest,
+		AuthorName:    c.config.Git.Author.Name,
+		AuthorEmail:   c.config.Git.Author.Email,
+		RepoURL:       repoURL,
+	})
 	if err != nil {
 		logger.Error("Failed to commit and push changes",
 			zap.String("service", service),
