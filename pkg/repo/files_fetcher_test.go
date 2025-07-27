@@ -22,8 +22,18 @@ func TestFetchRepositoryFiles(t *testing.T) {
 
 	repoURL := "https://github.com/owner1/repo1.git"
 	ctx := context.Background()
-	mockClient.EXPECT().GetFileContent(ctx, "owner1", "repo1", "README.md", "main").Return([]byte("content1"), nil)
-	mockClient.EXPECT().GetFileContent(ctx, "owner1", "repo1", "LICENSE", "main").Return([]byte("content2"), nil)
+	mockClient.EXPECT().GetFileContent(ctx, github.GetFileContentParams{
+		Owner: "owner1",
+		Repo:  "repo1",
+		Path:  "README.md",
+		Ref:   "main",
+	}).Return([]byte("content1"), nil)
+	mockClient.EXPECT().GetFileContent(ctx, github.GetFileContentParams{
+		Owner: "owner1",
+		Repo:  "repo1",
+		Path:  "LICENSE",
+		Ref:   "main",
+	}).Return([]byte("content2"), nil)
 
 	results, err := fetcher.Fetch(ctx, repoURL, "main", "README.md", "LICENSE")
 	require.NoError(t, err)
@@ -54,7 +64,12 @@ func TestFetchRepositoryFiles_ErrorOnFile(t *testing.T) {
 
 	repoURL := "https://github.com/owner1/repo1.git"
 	ctx := context.Background()
-	mockClient.EXPECT().GetFileContent(ctx, "owner1", "repo1", "README.md", "main").Return(nil, errors.New("fetch error"))
+	mockClient.EXPECT().GetFileContent(ctx, github.GetFileContentParams{
+		Owner: "owner1",
+		Repo:  "repo1",
+		Path:  "README.md",
+		Ref:   "main",
+	}).Return(nil, errors.New("fetch error"))
 
 	_, err := fetcher.Fetch(ctx, repoURL, "main", "README.md")
 	require.Error(t, err)

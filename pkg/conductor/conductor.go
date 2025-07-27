@@ -3,6 +3,7 @@ package conductor
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/lerenn/conductor/pkg/adapters/dagger"
 	"github.com/lerenn/conductor/pkg/adapters/github"
@@ -121,7 +122,14 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 
 		// Update each dependency for this service
 		for dep, mismatch := range deps {
-			if err := c.updateDependency(ctx, service, dep, mismatch, repoURL); err != nil {
+			branchName, err := c.updateDependency(ctx, service, dep, mismatch, repoURL)
+			if err != nil {
+				return err
+			}
+
+			// Always attempt MR creation, even if branch already existed
+			// In the future, we will detect if the MR already exists
+			if err := c.manageMergeRequest(ctx, service, dep, mismatch, repoURL, branchName); err != nil {
 				return err
 			}
 		}
@@ -139,7 +147,7 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 //
 //nolint:funlen // This function orchestrates a complex workflow that's difficult to break down further
 func (c *Conductor) updateDependency(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
-	repoURL string) error {
+	repoURL string) (string, error) {
 	logger := logging.C(ctx)
 	logger.Info("Updating dependency",
 		zap.String("service", service),
@@ -151,31 +159,34 @@ func (c *Conductor) updateDependency(ctx context.Context, service, dep string, m
 	dir, err := c.dagger.CloneRepo(ctx, repoURL, "main")
 	if err != nil {
 		logger.Error("Failed to clone repo for service", zap.String("service", service), zap.Error(err))
-		return err
+		return "", err
 	}
+
+	// Generate branch name
+	branchName := generateBranchName(dep, mismatch.Latest)
 
 	// Check if the branch already exists
 	branchExists, err := c.dagger.CheckBranchExists(ctx, dagger.CheckBranchExistsParams{
-		Dir:           dir,
-		ModulePath:    dep,
-		TargetVersion: mismatch.Latest,
-		RepoURL:       repoURL,
+		Dir:        dir,
+		BranchName: branchName,
+		RepoURL:    repoURL,
 	})
 	if err != nil {
 		logger.Error("Failed to check branch existence",
 			zap.String("service", service),
 			zap.String("dependency", dep),
 			zap.Error(err))
-		return err
+		return "", err
 	}
 
-	// If branch exists, skip this dependency
+	// If branch exists, skip dependency update but return the branch name
 	if branchExists {
 		logger.Warn("Branch already exists, skipping dependency update",
 			zap.String("service", service),
 			zap.String("dependency", dep),
-			zap.String("target_version", mismatch.Latest))
-		return nil
+			zap.String("target_version", mismatch.Latest),
+			zap.String("branch_name", branchName))
+		return branchName, nil
 	}
 
 	// Update the dependency
@@ -189,7 +200,7 @@ func (c *Conductor) updateDependency(ctx context.Context, service, dep string, m
 			zap.String("service", service),
 			zap.String("dependency", dep),
 			zap.Error(err))
-		return err
+		return "", err
 	}
 
 	logger.Info("Dependency updated successfully",
@@ -198,20 +209,20 @@ func (c *Conductor) updateDependency(ctx context.Context, service, dep string, m
 		zap.String("repo_url", repoURL))
 
 	// Commit and push the changes
-	branchName, err := c.dagger.CommitAndPush(ctx, dagger.CommitAndPushParams{
-		Dir:           updatedDir,
-		ModulePath:    dep,
-		TargetVersion: mismatch.Latest,
-		AuthorName:    c.config.Git.Author.Name,
-		AuthorEmail:   c.config.Git.Author.Email,
-		RepoURL:       repoURL,
+	_, err = c.dagger.CommitAndPush(ctx, dagger.CommitAndPushParams{
+		Dir:         updatedDir,
+		BranchName:  branchName,
+		ModulePath:  dep,
+		AuthorName:  c.config.Git.Author.Name,
+		AuthorEmail: c.config.Git.Author.Email,
+		RepoURL:     repoURL,
 	})
 	if err != nil {
 		logger.Error("Failed to commit and push changes",
 			zap.String("service", service),
 			zap.String("dependency", dep),
 			zap.Error(err))
-		return err
+		return "", err
 	}
 
 	logger.Info("Successfully committed and pushed changes",
@@ -220,7 +231,86 @@ func (c *Conductor) updateDependency(ctx context.Context, service, dep string, m
 		zap.String("branch_name", branchName),
 		zap.String("repo_url", repoURL))
 
+	return branchName, nil
+}
+
+// manageMergeRequest creates a merge request for the updated dependency.
+func (c *Conductor) manageMergeRequest(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
+	repoURL, branchName string) error {
+	logger := logging.C(ctx)
+	logger.Info("Creating merge request",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.String("from", mismatch.Actual),
+		zap.String("to", mismatch.Latest))
+
+	// Check if a pull request already exists for this branch
+	prNumber, err := c.client.CheckPullRequestExists(ctx, github.CheckPullRequestExistsParams{
+		RepoURL:      repoURL,
+		SourceBranch: branchName,
+	})
+	if err != nil {
+		logger.Error("Failed to check if pull request exists",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.String("branch_name", branchName),
+			zap.Error(err))
+		return err
+	}
+
+	if prNumber != -1 {
+		logger.Warn("Pull request already exists, skipping creation",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.String("branch_name", branchName),
+			zap.String("repo_url", repoURL),
+			zap.Int("pr_number", prNumber))
+		return nil
+	}
+
+	// Create the merge request
+	err = c.client.CreateMergeRequest(ctx, github.CreateMergeRequestParams{
+		RepoURL:       repoURL,
+		SourceBranch:  branchName,
+		ModulePath:    dep,
+		TargetVersion: mismatch.Latest,
+	})
+	if err != nil {
+		logger.Error("Failed to create merge request",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.String("branch_name", branchName),
+			zap.Error(err))
+		return err
+	}
+
+	logger.Info("Successfully created merge request",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.String("branch_name", branchName),
+		zap.String("repo_url", repoURL))
+
 	return nil
+}
+
+// sanitizeBranchName sanitizes a string to be used as a git branch name.
+func sanitizeBranchName(name string) string {
+	// Replace invalid characters with hyphens
+	invalidChars := []string{"/", ".", "\\", ":", "*", "?", "\"", "<", ">", "|", " "}
+	result := name
+	for _, char := range invalidChars {
+		result = strings.ReplaceAll(result, char, "-")
+	}
+	// Remove consecutive hyphens
+	result = strings.ReplaceAll(result, "--", "-")
+	// Remove leading/trailing hyphens
+	result = strings.Trim(result, "-")
+	return result
+}
+
+// generateBranchName generates a consistent branch name for dependency updates.
+func generateBranchName(modulePath, targetVersion string) string {
+	return fmt.Sprintf("conductor/update-%s-%s", sanitizeBranchName(modulePath), targetVersion)
 }
 
 // fetchModules fetches go.mod files and builds the input map for the dependency graph builder.

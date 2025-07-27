@@ -20,20 +20,19 @@ type UpdateGoDependencyParams struct {
 
 // CheckBranchExistsParams contains parameters for CheckBranchExists.
 type CheckBranchExistsParams struct {
-	Dir           *dagger.Directory
-	ModulePath    string
-	TargetVersion string
-	RepoURL       string
+	Dir        *dagger.Directory
+	BranchName string
+	RepoURL    string
 }
 
 // CommitAndPushParams contains parameters for CommitAndPush.
 type CommitAndPushParams struct {
-	Dir           *dagger.Directory
-	ModulePath    string
-	TargetVersion string
-	AuthorName    string
-	AuthorEmail   string
-	RepoURL       string
+	Dir         *dagger.Directory
+	BranchName  string
+	ModulePath  string
+	AuthorName  string
+	AuthorEmail string
+	RepoURL     string
 }
 
 // Dagger defines the interface for Dagger operations.
@@ -152,12 +151,8 @@ func contains(slice []string, item string) bool {
 func (d *daggerAdapter) CheckBranchExists(ctx context.Context, params CheckBranchExistsParams) (bool, error) {
 	logger := logging.C(ctx)
 	logger.Info("Checking if branch exists",
-		zap.String("module_path", params.ModulePath),
-		zap.String("target_version", params.TargetVersion),
+		zap.String("branch_name", params.BranchName),
 		zap.String("repo_url", params.RepoURL))
-
-	// Generate branch name using the same logic as CommitAndPush
-	branchName := generateBranchName(params.ModulePath, params.TargetVersion)
 
 	// Set up the token as a Dagger secret
 	secret := d.client.SetSecret("github_token", d.githubToken)
@@ -181,7 +176,7 @@ func (d *daggerAdapter) CheckBranchExists(ctx context.Context, params CheckBranc
 
 	// Perform the git ls-remote operation
 	lsRemoteOutput, err := container.WithExec([]string{"sh", "-c",
-		fmt.Sprintf("git ls-remote --heads origin %s", branchName)}).Stdout(ctx)
+		fmt.Sprintf("git ls-remote --heads origin %s", params.BranchName)}).Stdout(ctx)
 	if err != nil {
 		logger.Error("Failed to check branch existence", zap.Error(err))
 		return false, fmt.Errorf("failed to check branch existence: %w", err)
@@ -192,38 +187,14 @@ func (d *daggerAdapter) CheckBranchExists(ctx context.Context, params CheckBranc
 
 	if branchExists {
 		logger.Warn("Branch already exists, skipping dependency update",
-			zap.String("branch_name", branchName),
-			zap.String("module_path", params.ModulePath),
-			zap.String("target_version", params.TargetVersion),
+			zap.String("branch_name", params.BranchName),
 			zap.String("repo_url", params.RepoURL))
 	} else {
 		logger.Info("Branch does not exist, proceeding with dependency update",
-			zap.String("branch_name", branchName),
-			zap.String("module_path", params.ModulePath),
-			zap.String("target_version", params.TargetVersion))
+			zap.String("branch_name", params.BranchName))
 	}
 
 	return branchExists, nil
-}
-
-// sanitizeBranchName sanitizes a string to be used as a git branch name.
-func sanitizeBranchName(name string) string {
-	// Replace invalid characters with hyphens
-	invalidChars := []string{"/", ".", "\\", ":", "*", "?", "\"", "<", ">", "|", " "}
-	result := name
-	for _, char := range invalidChars {
-		result = strings.ReplaceAll(result, char, "-")
-	}
-	// Remove consecutive hyphens
-	result = strings.ReplaceAll(result, "--", "-")
-	// Remove leading/trailing hyphens
-	result = strings.Trim(result, "-")
-	return result
-}
-
-// generateBranchName generates a consistent branch name for dependency updates.
-func generateBranchName(modulePath, targetVersion string) string {
-	return fmt.Sprintf("conductor/update-%s-%s", sanitizeBranchName(modulePath), targetVersion)
 }
 
 // CommitAndPush commits the changes and pushes to a new branch.
@@ -231,11 +202,9 @@ func (d *daggerAdapter) CommitAndPush(ctx context.Context, params CommitAndPushP
 	logger := logging.C(ctx)
 	logger.Info("Committing and pushing changes",
 		zap.String("module_path", params.ModulePath),
-		zap.String("target_version", params.TargetVersion))
+		zap.String("branch_name", params.BranchName))
 
-	// Generate branch name
-	branchName := generateBranchName(params.ModulePath, params.TargetVersion)
-	commitMessage := fmt.Sprintf("fix(dependencies): update %s to %s", params.ModulePath, params.TargetVersion)
+	commitMessage := fmt.Sprintf("fix(dependencies): update %s", params.ModulePath)
 
 	// Set up the token as a Dagger secret
 	secret := d.client.SetSecret("github_token", d.githubToken)
@@ -260,7 +229,7 @@ func (d *daggerAdapter) CommitAndPush(ctx context.Context, params CommitAndPushP
 	container = container.WithExec([]string{"git", "commit", "-m", commitMessage})
 
 	// Create and checkout new branch
-	container = container.WithExec([]string{"git", "checkout", "-b", branchName})
+	container = container.WithExec([]string{"git", "checkout", "-b", params.BranchName})
 
 	// Set up remote with authentication and push
 	owner, repo := extractOwnerAndRepoFromURL(params.RepoURL)
@@ -269,16 +238,16 @@ func (d *daggerAdapter) CommitAndPush(ctx context.Context, params CommitAndPushP
 			owner, repo)})
 
 	// Push the branch
-	_, err := container.WithExec([]string{"git", "push", "-u", "origin", branchName}).Sync(ctx)
+	_, err := container.WithExec([]string{"git", "push", "-u", "origin", params.BranchName}).Sync(ctx)
 	if err != nil {
 		logger.Error("Failed to push branch", zap.Error(err))
 		return "", fmt.Errorf("failed to push branch: %w", err)
 	}
 
 	logger.Info("Successfully committed and pushed changes",
-		zap.String("branch_name", branchName),
+		zap.String("branch_name", params.BranchName),
 		zap.String("commit_message", commitMessage))
-	return branchName, nil
+	return params.BranchName, nil
 }
 
 // extractOwnerAndRepoFromURL extracts owner and repo from a GitHub URL like "https://github.com/owner/repo.git"

@@ -25,6 +25,7 @@ type TestConductor struct {
 	MockVersionDetector *repo.MockVersionDetector
 	MockChecker         *depgraph.MockInconsistencyChecker
 	MockDagger          *dagger.MockDagger
+	MockGitHubClient    *github.MockClient
 }
 
 // newTestConductor creates a TestConductor instance with all mocked dependencies
@@ -37,15 +38,15 @@ func newTestConductor(t *testing.T, cfg *config.Config) *TestConductor {
 	mockVersionDetector := repo.NewMockVersionDetector(ctrl)
 	mockChecker := depgraph.NewMockInconsistencyChecker(ctrl)
 	mockDagger := dagger.NewMockDagger(ctrl)
+	mockGitHubClient := github.NewMockClient(ctrl)
 
 	// Set up default expectations
 	mockDagger.EXPECT().Close().Return(nil)
 
 	// Create Conductor directly, avoiding New() which requires Docker
-	client := github.New("test-token")
 	c := &Conductor{
 		config:          cfg,
-		client:          client,
+		client:          mockGitHubClient,
 		fetcher:         mockFetcher,
 		graphBuilder:    mockGraphBuilder,
 		versionDetector: mockVersionDetector,
@@ -61,6 +62,7 @@ func newTestConductor(t *testing.T, cfg *config.Config) *TestConductor {
 		MockVersionDetector: mockVersionDetector,
 		MockChecker:         mockChecker,
 		MockDagger:          mockDagger,
+		MockGitHubClient:    mockGitHubClient,
 	}
 }
 
@@ -124,10 +126,9 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
 	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
-		Dir:           nil,
-		ModulePath:    "github.com/test/dep",
-		TargetVersion: "v1.1.0",
-		RepoURL:       "https://github.com/test/repo",
+		Dir:        nil,
+		BranchName: "conductor/update-github-com-test-dep-v1.1.0",
+		RepoURL:    "https://github.com/test/repo",
 	}).Return(false, nil)
 	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), dagger.UpdateGoDependencyParams{
 		Dir:           nil,
@@ -135,13 +136,33 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 		TargetVersion: "v1.1.0",
 	}).Return(nil, nil)
 	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
-		Dir:           nil,
-		ModulePath:    "github.com/test/dep",
-		TargetVersion: "v1.1.0",
-		AuthorName:    "Conductor Bot",
-		AuthorEmail:   "conductor@example.com",
-		RepoURL:       "https://github.com/test/repo",
-	}).Return("conductor/update-github.com-test-dep-v1.1.0", nil)
+		Dir:         nil,
+		BranchName:  "conductor/update-github-com-test-dep-v1.1.0",
+		ModulePath:  "github.com/test/dep",
+		AuthorName:  "Conductor Bot",
+		AuthorEmail: "conductor@example.com",
+		RepoURL:     "https://github.com/test/repo",
+	}).Return("conductor/update-github-com-test-dep-v1.1.0", nil)
+
+	// Mock the CheckPullRequestExists call (returns -1 - no existing PR)
+	tc.MockGitHubClient.EXPECT().CheckPullRequestExists(
+		gomock.Any(),
+		github.CheckPullRequestExistsParams{
+			RepoURL:      "https://github.com/test/repo",
+			SourceBranch: "conductor/update-github-com-test-dep-v1.1.0",
+		},
+	).Return(-1, nil)
+
+	// Mock the CreateMergeRequest call
+	tc.MockGitHubClient.EXPECT().CreateMergeRequest(
+		gomock.Any(),
+		github.CreateMergeRequestParams{
+			RepoURL:       "https://github.com/test/repo",
+			SourceBranch:  "conductor/update-github-com-test-dep-v1.1.0",
+			ModulePath:    "github.com/test/dep",
+			TargetVersion: "v1.1.0",
+		},
+	).Return(nil)
 
 	ctx := context.Background()
 	err := tc.Conductor.Run(ctx)
@@ -250,10 +271,9 @@ func TestConductor_Run_WithRepositories_DependencyUpdateError(t *testing.T) {
 
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
 	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
-		Dir:           nil,
-		ModulePath:    "github.com/test/dep",
-		TargetVersion: "v1.1.0",
-		RepoURL:       "https://github.com/test/repo",
+		Dir:        nil,
+		BranchName: "conductor/update-github-com-test-dep-v1.1.0",
+		RepoURL:    "https://github.com/test/repo",
 	}).Return(false, nil)
 	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), dagger.UpdateGoDependencyParams{
 		Dir:           nil,
@@ -310,15 +330,25 @@ func TestConductor_Run_WithRepositories_BranchExists(t *testing.T) {
 	}
 	tc.MockChecker.EXPECT().Check(mockGraph).Return(mismatches, nil)
 
-	// Branch exists, so skip the dependency update
+	// Branch exists, so skip the dependency update but still create MR
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
 	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
-		Dir:           nil,
-		ModulePath:    "github.com/test/dep",
-		TargetVersion: "v1.1.0",
-		RepoURL:       "https://github.com/test/repo",
+		Dir:        nil,
+		BranchName: "conductor/update-github-com-test-dep-v1.1.0",
+		RepoURL:    "https://github.com/test/repo",
 	}).Return(true, nil)
 	// No UpdateGoDependency or CommitAndPush calls expected since branch exists
+
+	// Mock the CheckPullRequestExists call (returns PR number - PR already exists)
+	tc.MockGitHubClient.EXPECT().CheckPullRequestExists(
+		gomock.Any(),
+		github.CheckPullRequestExistsParams{
+			RepoURL:      "https://github.com/test/repo",
+			SourceBranch: "conductor/update-github-com-test-dep-v1.1.0",
+		},
+	).Return(123, nil)
+
+	// No CreateMergeRequest call expected since PR already exists
 
 	ctx := context.Background()
 	err := tc.Conductor.Run(ctx)
@@ -364,10 +394,9 @@ func TestConductor_Run_WithRepositories_CheckBranchExistsError(t *testing.T) {
 
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
 	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
-		Dir:           nil,
-		ModulePath:    "github.com/test/dep",
-		TargetVersion: "v1.1.0",
-		RepoURL:       "https://github.com/test/repo",
+		Dir:        nil,
+		BranchName: "conductor/update-github-com-test-dep-v1.1.0",
+		RepoURL:    "https://github.com/test/repo",
 	}).Return(false, assert.AnError)
 
 	ctx := context.Background()
@@ -421,10 +450,9 @@ func TestConductor_Run_WithRepositories_CommitAndPushError(t *testing.T) {
 
 	tc.MockDagger.EXPECT().CloneRepo(gomock.Any(), "https://github.com/test/repo", "main").Return(nil, nil)
 	tc.MockDagger.EXPECT().CheckBranchExists(gomock.Any(), dagger.CheckBranchExistsParams{
-		Dir:           nil,
-		ModulePath:    "github.com/test/dep",
-		TargetVersion: "v1.1.0",
-		RepoURL:       "https://github.com/test/repo",
+		Dir:        nil,
+		BranchName: "conductor/update-github-com-test-dep-v1.1.0",
+		RepoURL:    "https://github.com/test/repo",
 	}).Return(false, nil)
 	tc.MockDagger.EXPECT().UpdateGoDependency(gomock.Any(), dagger.UpdateGoDependencyParams{
 		Dir:           nil,
@@ -432,13 +460,15 @@ func TestConductor_Run_WithRepositories_CommitAndPushError(t *testing.T) {
 		TargetVersion: "v1.1.0",
 	}).Return(nil, nil)
 	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
-		Dir:           nil,
-		ModulePath:    "github.com/test/dep",
-		TargetVersion: "v1.1.0",
-		AuthorName:    "Conductor Bot",
-		AuthorEmail:   "conductor@example.com",
-		RepoURL:       "https://github.com/test/repo",
+		Dir:         nil,
+		BranchName:  "conductor/update-github-com-test-dep-v1.1.0",
+		ModulePath:  "github.com/test/dep",
+		AuthorName:  "Conductor Bot",
+		AuthorEmail: "conductor@example.com",
+		RepoURL:     "https://github.com/test/repo",
 	}).Return("", assert.AnError)
+
+	// No CheckPullRequestExists or CreateMergeRequest calls expected since CommitAndPush failed
 
 	ctx := context.Background()
 	err := tc.Conductor.Run(ctx)

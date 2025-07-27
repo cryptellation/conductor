@@ -41,7 +41,12 @@ func (f *fetcher) Fetch(
 	}
 	results := make(map[string][]byte)
 	for _, file := range files {
-		content, err := f.client.GetFileContent(ctx, owner, name, file, ref)
+		content, err := f.client.GetFileContent(ctx, github.GetFileContentParams{
+			Owner: owner,
+			Repo:  name,
+			Path:  file,
+			Ref:   ref,
+		})
 		if err != nil {
 			return nil, err
 		}

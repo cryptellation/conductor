@@ -129,14 +129,12 @@ func TestDagger_CheckBranchExists_NonExistingBranch(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check for a non-existing branch
-	modulePath := "github.com/test/dep"
-	targetVersion := "v1.1.0"
+	branchName := "conductor/update-github-com-test-dep-v1.1.0"
 
 	exists, err := daggerAdapter.CheckBranchExists(ctx, CheckBranchExistsParams{
-		Dir:           dir,
-		ModulePath:    modulePath,
-		TargetVersion: targetVersion,
-		RepoURL:       repoURL,
+		Dir:        dir,
+		BranchName: branchName,
+		RepoURL:    repoURL,
 	})
 	require.NoError(t, err)
 	assert.False(t, exists, "Branch should not exist")
@@ -162,14 +160,12 @@ func TestDagger_CheckBranchExists_ExistingBranch(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check for an existing branch (master branch should exist)
-	modulePath := "github.com/test/dep"
-	targetVersion := "master" // This will create a branch name that matches the existing master branch
+	branchName := "master" // This will check for the existing master branch
 
 	exists, err := daggerAdapter.CheckBranchExists(ctx, CheckBranchExistsParams{
-		Dir:           dir,
-		ModulePath:    modulePath,
-		TargetVersion: targetVersion,
-		RepoURL:       repoURL,
+		Dir:        dir,
+		BranchName: branchName,
+		RepoURL:    repoURL,
 	})
 	require.NoError(t, err)
 	assert.True(t, exists, "Branch should exist")

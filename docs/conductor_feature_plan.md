@@ -67,7 +67,7 @@ This document outlines the actionable development plan for the Conductor tool. O
 
 - **2.1. Dagger workflow**
   - 2.1.1 Implement a way to git clone a project with Dagger
-    - Status: in progress
+    - Status: done
     - Implementation clarifications (2024-06-12):
       - Implement as a Go function in `/pkg/dagger` (not as a Dagger module).
       - The function should use the Dagger Go SDK to perform a shallow git clone of a given repository URL.
@@ -152,7 +152,22 @@ This document outlines the actionable development plan for the Conductor tool. O
 
 - **2.2. MR Creation Logic**
   - 2.2.1 Implement logic to create merge requests in affected repositories.
-    - Status: 
+    - Status: done
+    - Implementation clarifications (2024-12-19):
+      - Create a new method on the existing GitHub adapter in `/pkg/adapters/github`.
+      - Function signature: `CreateMergeRequest(ctx context.Context, repoURL, sourceBranch, modulePath, targetVersion string) error`.
+      - MR title format: "[{git name}] Update {dependency} to {version}" where git name comes from config (`c.config.Git.Author.Name`).
+      - Create a separate function `GenerateMRTitle` for reuse.
+      - MR description should be auto-generated and include: what dependency was updated, from what version to what version, and other relevant details.
+      - Source branch: the branch created by `CommitAndPush` (`conductor/update-{dependency}-{version}`).
+      - Target branch: use a constant (default "main") for easy future modification.
+      - Fail fast on any MR creation errors: log the error with details, return the error, and stop for all remaining service/dependency.
+      - Modify `updateDependency` to return the branch name as a string.
+      - The function should be called from a new method `manageMergeRequest` on Conductor struct after `updateDependency` in the loop.
+      - The `manageMergeRequest` method will also handle wait for checks and submission in future features.
+      - Create one MR per dependency update.
+      - No return values needed - everything handled within the function.
+      - No configuration needed for now.
   - 2.2.2 Populate MRs with relevant changes (e.g., dependency version bumps).
     - Status: 
 
