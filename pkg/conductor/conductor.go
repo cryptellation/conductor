@@ -245,6 +245,29 @@ func (c *Conductor) manageMergeRequest(ctx context.Context, service, dep string,
 		zap.String("to", mismatch.Latest))
 
 	// Check if a pull request already exists for this branch
+	prNumber, err := c.checkExistingPullRequest(ctx, service, dep, repoURL, branchName)
+	if err != nil {
+		return err
+	}
+
+	// If no PR exists, create it
+	if prNumber == -1 {
+		prNumber, err = c.createMergeRequest(ctx, service, dep, mismatch, repoURL, branchName)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check and log CI/CD status
+	c.checkAndLogCIStatus(ctx, service, dep, repoURL, prNumber)
+
+	return nil
+}
+
+// checkExistingPullRequest checks if a pull request already exists for the given branch.
+func (c *Conductor) checkExistingPullRequest(ctx context.Context, service, dep, repoURL, branchName string) (
+	int, error) {
+	logger := logging.C(ctx)
 	prNumber, err := c.client.CheckPullRequestExists(ctx, github.CheckPullRequestExistsParams{
 		RepoURL:      repoURL,
 		SourceBranch: branchName,
@@ -255,7 +278,7 @@ func (c *Conductor) manageMergeRequest(ctx context.Context, service, dep string,
 			zap.String("dependency", dep),
 			zap.String("branch_name", branchName),
 			zap.Error(err))
-		return err
+		return -1, err
 	}
 
 	if prNumber != -1 {
@@ -265,11 +288,16 @@ func (c *Conductor) manageMergeRequest(ctx context.Context, service, dep string,
 			zap.String("branch_name", branchName),
 			zap.String("repo_url", repoURL),
 			zap.Int("pr_number", prNumber))
-		return nil
 	}
 
-	// Create the merge request
-	err = c.client.CreateMergeRequest(ctx, github.CreateMergeRequestParams{
+	return prNumber, nil
+}
+
+// createMergeRequest creates a new merge request.
+func (c *Conductor) createMergeRequest(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
+	repoURL, branchName string) (int, error) {
+	logger := logging.C(ctx)
+	prNumber, err := c.client.CreateMergeRequest(ctx, github.CreateMergeRequestParams{
 		RepoURL:       repoURL,
 		SourceBranch:  branchName,
 		ModulePath:    dep,
@@ -281,16 +309,54 @@ func (c *Conductor) manageMergeRequest(ctx context.Context, service, dep string,
 			zap.String("dependency", dep),
 			zap.String("branch_name", branchName),
 			zap.Error(err))
-		return err
+		return -1, err
 	}
 
 	logger.Info("Successfully created merge request",
 		zap.String("service", service),
 		zap.String("dependency", dep),
 		zap.String("branch_name", branchName),
-		zap.String("repo_url", repoURL))
+		zap.String("repo_url", repoURL),
+		zap.Int("pr_number", prNumber))
 
-	return nil
+	return prNumber, nil
+}
+
+// checkAndLogCIStatus checks the CI/CD status and logs the result.
+func (c *Conductor) checkAndLogCIStatus(ctx context.Context, service, dep, repoURL string, prNumber int) {
+	logger := logging.C(ctx)
+	checkStatus, err := c.client.GetPullRequestChecks(ctx, github.GetPullRequestChecksParams{
+		RepoURL:  repoURL,
+		PRNumber: prNumber,
+	})
+	if err != nil {
+		logger.Error("Failed to get pull request checks",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Int("pr_number", prNumber),
+			zap.Error(err))
+		// Continue with other MRs, don't fail the entire process
+		return
+	}
+
+	// Log the check status
+	switch checkStatus.Status {
+	case "running":
+		logger.Info("CI/CD checks are still running",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Int("pr_number", prNumber))
+	case "passed":
+		logger.Info("CI/CD checks have passed",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Int("pr_number", prNumber))
+	case "failed":
+		logger.Warn("CI/CD checks have failed - manual intervention required",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Int("pr_number", prNumber))
+	}
 }
 
 // sanitizeBranchName sanitizes a string to be used as a git branch name.

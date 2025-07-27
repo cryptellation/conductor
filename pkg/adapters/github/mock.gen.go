@@ -57,11 +57,12 @@ func (mr *MockClientMockRecorder) CheckPullRequestExists(ctx, params any) *gomoc
 }
 
 // CreateMergeRequest mocks base method.
-func (m *MockClient) CreateMergeRequest(ctx context.Context, params CreateMergeRequestParams) error {
+func (m *MockClient) CreateMergeRequest(ctx context.Context, params CreateMergeRequestParams) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateMergeRequest", ctx, params)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateMergeRequest indicates an expected call of CreateMergeRequest.
@@ -83,6 +84,21 @@ func (m *MockClient) GetFileContent(ctx context.Context, params GetFileContentPa
 func (mr *MockClientMockRecorder) GetFileContent(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFileContent", reflect.TypeOf((*MockClient)(nil).GetFileContent), ctx, params)
+}
+
+// GetPullRequestChecks mocks base method.
+func (m *MockClient) GetPullRequestChecks(ctx context.Context, params GetPullRequestChecksParams) (*CheckStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPullRequestChecks", ctx, params)
+	ret0, _ := ret[0].(*CheckStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPullRequestChecks indicates an expected call of GetPullRequestChecks.
+func (mr *MockClientMockRecorder) GetPullRequestChecks(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPullRequestChecks", reflect.TypeOf((*MockClient)(nil).GetPullRequestChecks), ctx, params)
 }
 
 // ListTags mocks base method.

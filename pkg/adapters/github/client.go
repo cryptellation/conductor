@@ -32,12 +32,24 @@ type CheckPullRequestExistsParams struct {
 	SourceBranch string
 }
 
+// GetPullRequestChecksParams contains parameters for GetPullRequestChecks.
+type GetPullRequestChecksParams struct {
+	RepoURL  string
+	PRNumber int
+}
+
+// CheckStatus represents the status of CI/CD checks for a pull request.
+type CheckStatus struct {
+	Status string // "running", "passed", "failed"
+}
+
 // Client defines the interface for interacting with GitHub.
 type Client interface {
 	GetFileContent(ctx context.Context, params GetFileContentParams) ([]byte, error)
 	ListTags(ctx context.Context, owner, repo string) ([]*github.RepositoryTag, error)
-	CreateMergeRequest(ctx context.Context, params CreateMergeRequestParams) error
+	CreateMergeRequest(ctx context.Context, params CreateMergeRequestParams) (int, error)
 	CheckPullRequestExists(ctx context.Context, params CheckPullRequestExistsParams) (int, error)
+	GetPullRequestChecks(ctx context.Context, params GetPullRequestChecksParams) (*CheckStatus, error)
 }
 
 // client implements Client using go-github.
@@ -78,12 +90,12 @@ func (c *client) ListTags(ctx context.Context, owner, repo string) ([]*github.Re
 }
 
 // CreateMergeRequest creates a merge request in the specified repository.
-func (c *client) CreateMergeRequest(ctx context.Context, params CreateMergeRequestParams) error {
+func (c *client) CreateMergeRequest(ctx context.Context, params CreateMergeRequestParams) (int, error) {
 	// Extract owner and repo from the repository URL
 	// Format: https://github.com/owner/repo
 	parts := strings.Split(strings.TrimPrefix(params.RepoURL, "https://"), "/")
 	if len(parts) != 3 {
-		return fmt.Errorf("invalid repository URL format: %s", params.RepoURL)
+		return -1, fmt.Errorf("invalid repository URL format: %s", params.RepoURL)
 	}
 	owner := parts[1]
 	repo := parts[2]
@@ -100,8 +112,12 @@ func (c *client) CreateMergeRequest(ctx context.Context, params CreateMergeReque
 		Base:  github.String("main"), // Using constant as specified
 	}
 
-	_, _, err := c.gh.PullRequests.Create(ctx, owner, repo, pr)
-	return err
+	createdPR, _, err := c.gh.PullRequests.Create(ctx, owner, repo, pr)
+	if err != nil {
+		return -1, err
+	}
+
+	return *createdPR.Number, nil
 }
 
 // CheckPullRequestExists checks if a pull request already exists for the given branch.
@@ -134,6 +150,62 @@ func (c *client) CheckPullRequestExists(ctx context.Context, params CheckPullReq
 
 	// No pull request found
 	return -1, nil
+}
+
+// GetPullRequestChecks gets the status of CI/CD checks for a pull request.
+func (c *client) GetPullRequestChecks(ctx context.Context, params GetPullRequestChecksParams) (*CheckStatus, error) {
+	owner, repo, err := extractOwnerAndRepo(params.RepoURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the pull request to find the head SHA
+	pr, _, err := c.gh.PullRequests.Get(ctx, owner, repo, params.PRNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pull request: %w", err)
+	}
+
+	// Get check runs for the head commit
+	checkRuns, _, err := c.gh.Checks.ListCheckRunsForRef(ctx, owner, repo, *pr.Head.SHA, &github.ListCheckRunsOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get check runs: %w", err)
+	}
+
+	return determineCheckStatus(checkRuns.CheckRuns), nil
+}
+
+// extractOwnerAndRepo extracts owner and repo from a GitHub URL.
+func extractOwnerAndRepo(repoURL string) (string, string, error) {
+	parts := strings.Split(strings.TrimPrefix(repoURL, "https://"), "/")
+	if len(parts) != 3 {
+		return "", "", fmt.Errorf("invalid repository URL format: %s", repoURL)
+	}
+	return parts[1], parts[2], nil
+}
+
+// determineCheckStatus determines the overall status of check runs.
+func determineCheckStatus(checkRuns []*github.CheckRun) *CheckStatus {
+	if len(checkRuns) == 0 {
+		// No checks found, consider as running
+		return &CheckStatus{Status: "running"}
+	}
+
+	// Check if any checks are still running
+	for _, check := range checkRuns {
+		if *check.Status == "in_progress" || *check.Status == "queued" {
+			return &CheckStatus{Status: "running"}
+		}
+	}
+
+	// Check if any checks failed
+	for _, check := range checkRuns {
+		if *check.Conclusion == "failure" || *check.Conclusion == "cancelled" || *check.Conclusion == "timed_out" {
+			return &CheckStatus{Status: "failed"}
+		}
+	}
+
+	// All checks passed
+	return &CheckStatus{Status: "passed"}
 }
 
 // generateMRTitle generates the title for a merge request.

@@ -168,14 +168,20 @@ This document outlines the actionable development plan for the Conductor tool. O
       - Create one MR per dependency update.
       - No return values needed - everything handled within the function.
       - No configuration needed for now.
-  - 2.2.2 Populate MRs with relevant changes (e.g., dependency version bumps).
-    - Status: 
 
 - **2.3. MR Status Tracking**
-  - 2.3.1 Track the status of created MRs (open, merged, closed, etc.).
-    - Status: 
-  - 2.3.2 Notify or log progress for each MR.
-    - Status: 
+  - 2.3.1 Track the status of created MRs (open, merged, closed, etc.) and wait for the checks to pass. It should NEVER by pass checks (even if they are not started).
+    - Status: done
+    - Implementation clarifications (2024-12-19):
+      - Modify `CreateMergeRequest` to return the PR number for tracking newly created MRs.
+      - Add new methods to GitHub client interface for getting PR details and check status.
+      - Implement non-blocking check in `manageMergeRequest` to check CI/CD status.
+      - Check status once immediately after MR creation and log the current state (running/passed/failed).
+      - If checks are still running, log and continue to next services/dependencies.
+      - If checks fail, log failure and continue with other MRs (no retry, manual intervention required).
+      - Log only pass/fail status, not detailed check information.
+      - Use GitHub Checks API to determine check status.
+      - Consider PR successful when all CI/CD checks pass.
 
 - **2.4. Error Handling & Retries**
   - 2.4.1 Handle failed MR creations or API errors.
