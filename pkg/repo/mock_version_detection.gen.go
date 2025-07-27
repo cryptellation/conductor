@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	github "github.com/lerenn/conductor/pkg/adapters/github"
-	depgraph "github.com/lerenn/conductor/pkg/depgraph"
+	github "github.com/cryptellation/conductor/pkg/adapters/github"
+	depgraph "github.com/cryptellation/conductor/pkg/depgraph"
 	gomock "go.uber.org/mock/gomock"
 )
 
