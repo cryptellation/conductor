@@ -41,19 +41,48 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
-// GetFileContent mocks base method.
-func (m *MockClient) GetFileContent(ctx context.Context, owner, repo, path, ref string) ([]byte, error) {
+// CheckPullRequestExists mocks base method.
+func (m *MockClient) CheckPullRequestExists(ctx context.Context, params CheckPullRequestExistsParams) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFileContent", ctx, owner, repo, path, ref)
+	ret := m.ctrl.Call(m, "CheckPullRequestExists", ctx, params)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckPullRequestExists indicates an expected call of CheckPullRequestExists.
+func (mr *MockClientMockRecorder) CheckPullRequestExists(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckPullRequestExists", reflect.TypeOf((*MockClient)(nil).CheckPullRequestExists), ctx, params)
+}
+
+// CreateMergeRequest mocks base method.
+func (m *MockClient) CreateMergeRequest(ctx context.Context, params CreateMergeRequestParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMergeRequest", ctx, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateMergeRequest indicates an expected call of CreateMergeRequest.
+func (mr *MockClientMockRecorder) CreateMergeRequest(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMergeRequest", reflect.TypeOf((*MockClient)(nil).CreateMergeRequest), ctx, params)
+}
+
+// GetFileContent mocks base method.
+func (m *MockClient) GetFileContent(ctx context.Context, params GetFileContentParams) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFileContent", ctx, params)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetFileContent indicates an expected call of GetFileContent.
-func (mr *MockClientMockRecorder) GetFileContent(ctx, owner, repo, path, ref any) *gomock.Call {
+func (mr *MockClientMockRecorder) GetFileContent(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFileContent", reflect.TypeOf((*MockClient)(nil).GetFileContent), ctx, owner, repo, path, ref)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFileContent", reflect.TypeOf((*MockClient)(nil).GetFileContent), ctx, params)
 }
 
 // ListTags mocks base method.

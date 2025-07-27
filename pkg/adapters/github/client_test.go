@@ -23,7 +23,12 @@ func TestGetFileContent(t *testing.T) {
 	path := "README"
 	ref := "master"
 
-	content, err := client.GetFileContent(ctx, owner, repo, path, ref)
+	content, err := client.GetFileContent(ctx, GetFileContentParams{
+		Owner: owner,
+		Repo:  repo,
+		Path:  path,
+		Ref:   ref,
+	})
 	if err != nil {
 		t.Fatalf("failed to get file content: %v", err)
 	}
