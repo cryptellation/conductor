@@ -162,7 +162,16 @@ func TestConductor_Run_WithRepositories_Success(t *testing.T) {
 			ModulePath:    "github.com/test/dep",
 			TargetVersion: "v1.1.0",
 		},
-	).Return(nil)
+	).Return(123, nil)
+
+	// Mock the GetPullRequestChecks call
+	tc.MockGitHubClient.EXPECT().GetPullRequestChecks(
+		gomock.Any(),
+		github.GetPullRequestChecksParams{
+			RepoURL:  "https://github.com/test/repo",
+			PRNumber: 123,
+		},
+	).Return(&github.CheckStatus{Status: "running"}, nil)
 
 	ctx := context.Background()
 	err := tc.Conductor.Run(ctx)
@@ -347,6 +356,15 @@ func TestConductor_Run_WithRepositories_BranchExists(t *testing.T) {
 			SourceBranch: "conductor/update-github-com-test-dep-v1.1.0",
 		},
 	).Return(123, nil)
+
+	// Mock the GetPullRequestChecks call for existing PR
+	tc.MockGitHubClient.EXPECT().GetPullRequestChecks(
+		gomock.Any(),
+		github.GetPullRequestChecksParams{
+			RepoURL:  "https://github.com/test/repo",
+			PRNumber: 123,
+		},
+	).Return(&github.CheckStatus{Status: "running"}, nil)
 
 	// No CreateMergeRequest call expected since PR already exists
 
