@@ -1,4 +1,4 @@
-module github.com/lerenn/conductor
+module github.com/cryptellation/conductor
 
 go 1.23.8
 

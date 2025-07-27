@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/lerenn/conductor/pkg/conductor"
-	"github.com/lerenn/conductor/pkg/config"
-	"github.com/lerenn/conductor/pkg/logging"
+	"github.com/cryptellation/conductor/pkg/conductor"
+	"github.com/cryptellation/conductor/pkg/config"
+	"github.com/cryptellation/conductor/pkg/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

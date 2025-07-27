@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lerenn/conductor/pkg/adapters/dagger"
-	"github.com/lerenn/conductor/pkg/adapters/github"
-	"github.com/lerenn/conductor/pkg/config"
-	"github.com/lerenn/conductor/pkg/depgraph"
-	"github.com/lerenn/conductor/pkg/logging"
-	"github.com/lerenn/conductor/pkg/repo"
+	"github.com/cryptellation/conductor/pkg/adapters/dagger"
+	"github.com/cryptellation/conductor/pkg/adapters/github"
+	"github.com/cryptellation/conductor/pkg/config"
+	"github.com/cryptellation/conductor/pkg/depgraph"
+	"github.com/cryptellation/conductor/pkg/logging"
+	"github.com/cryptellation/conductor/pkg/repo"
 	"go.uber.org/zap"
 	"golang.org/x/mod/modfile"
 )
