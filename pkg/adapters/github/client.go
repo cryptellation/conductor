@@ -46,6 +46,12 @@ type MergeMergeRequestParams struct {
 	TargetVersion string
 }
 
+// DeleteBranchParams contains parameters for DeleteBranch.
+type DeleteBranchParams struct {
+	RepoURL    string
+	BranchName string
+}
+
 // CheckStatus represents the status of CI/CD checks for a pull request.
 type CheckStatus struct {
 	Status string // "running", "passed", "failed"
@@ -59,6 +65,7 @@ type Client interface {
 	CheckPullRequestExists(ctx context.Context, params CheckPullRequestExistsParams) (int, error)
 	GetPullRequestChecks(ctx context.Context, params GetPullRequestChecksParams) (*CheckStatus, error)
 	MergeMergeRequest(ctx context.Context, params MergeMergeRequestParams) error
+	DeleteBranch(ctx context.Context, params DeleteBranchParams) error
 }
 
 // client implements Client using go-github.
@@ -197,6 +204,22 @@ func (c *client) MergeMergeRequest(ctx context.Context, params MergeMergeRequest
 	})
 	if err != nil {
 		return fmt.Errorf("failed to merge pull request: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteBranch deletes a branch from a GitHub repository.
+func (c *client) DeleteBranch(ctx context.Context, params DeleteBranchParams) error {
+	owner, repo, err := extractOwnerAndRepo(params.RepoURL)
+	if err != nil {
+		return err
+	}
+
+	// Delete the branch using GitHub API
+	_, err = c.gh.Git.DeleteRef(ctx, owner, repo, fmt.Sprintf("refs/heads/%s", params.BranchName))
+	if err != nil {
+		return fmt.Errorf("failed to delete branch %s: %w", params.BranchName, err)
 	}
 
 	return nil

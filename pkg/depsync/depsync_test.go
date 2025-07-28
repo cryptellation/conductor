@@ -281,6 +281,15 @@ func TestDepSync_Run_WithRepositories_ChecksPassAndMerge(t *testing.T) {
 		},
 	).Return(nil)
 
+	// Mock the DeleteBranch call
+	tc.MockGitHubClient.EXPECT().DeleteBranch(
+		gomock.Any(),
+		github.DeleteBranchParams{
+			RepoURL:    "https://github.com/test/repo",
+			BranchName: "depsync/update-github-com-test-dep-v1.1.0",
+		},
+	).Return(nil)
+
 	ctx := context.Background()
 	err := tc.DepSync.Run(ctx)
 

@@ -259,7 +259,7 @@ func (c *DepSync) manageMergeRequest(ctx context.Context, service, dep string, m
 	}
 
 	// Check and merge MR if checks pass
-	c.checkAndMergeMR(ctx, service, dep, mismatch, repoURL, prNumber)
+	c.checkAndMergeMR(ctx, service, dep, mismatch, repoURL, prNumber, branchName)
 
 	return nil
 }
@@ -324,7 +324,7 @@ func (c *DepSync) createMergeRequest(ctx context.Context, service, dep string, m
 
 // checkAndMergeMR checks the CI/CD status and merges the MR if checks pass.
 func (c *DepSync) checkAndMergeMR(ctx context.Context, service, dep string,
-	mismatch depgraph.Mismatch, repoURL string, prNumber int) {
+	mismatch depgraph.Mismatch, repoURL string, prNumber int, branchName string) {
 	logger := logging.C(ctx)
 	checkStatus, err := c.client.GetPullRequestChecks(ctx, github.GetPullRequestChecksParams{
 		RepoURL:  repoURL,
@@ -353,7 +353,7 @@ func (c *DepSync) checkAndMergeMR(ctx context.Context, service, dep string,
 			zap.String("dependency", dep),
 			zap.Int("pr_number", prNumber))
 
-		if err := c.mergeMergeRequest(ctx, service, dep, mismatch, repoURL, prNumber); err != nil {
+		if err := c.mergeMergeRequest(ctx, service, dep, mismatch, repoURL, prNumber, branchName); err != nil {
 			logger.Error("Failed to merge pull request",
 				zap.String("service", service),
 				zap.String("dependency", dep),
@@ -378,7 +378,7 @@ func (c *DepSync) checkAndMergeMR(ctx context.Context, service, dep string,
 
 // mergeMergeRequest merges the specified pull request.
 func (c *DepSync) mergeMergeRequest(ctx context.Context, service, dep string,
-	mismatch depgraph.Mismatch, repoURL string, prNumber int) error {
+	mismatch depgraph.Mismatch, repoURL string, prNumber int, branchName string) error {
 	logger := logging.C(ctx)
 
 	err := c.client.MergeMergeRequest(ctx, github.MergeMergeRequestParams{
@@ -400,6 +400,26 @@ func (c *DepSync) mergeMergeRequest(ctx context.Context, service, dep string,
 		zap.String("service", service),
 		zap.String("dependency", dep),
 		zap.Int("pr_number", prNumber))
+
+	// Delete the branch after successful merge
+	err = c.client.DeleteBranch(ctx, github.DeleteBranchParams{
+		RepoURL:    repoURL,
+		BranchName: branchName,
+	})
+	if err != nil {
+		logger.Error("Failed to delete branch after merge",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.String("branch_name", branchName),
+			zap.Error(err))
+		// Don't return error here, as the merge was successful
+		// Just log the failure and continue
+	} else {
+		logger.Info("Branch deleted successfully after merge",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.String("branch_name", branchName))
+	}
 
 	return nil
 }
