@@ -115,3 +115,17 @@ func (mr *MockClientMockRecorder) ListTags(ctx, owner, repo any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTags", reflect.TypeOf((*MockClient)(nil).ListTags), ctx, owner, repo)
 }
+
+// MergeMergeRequest mocks base method.
+func (m *MockClient) MergeMergeRequest(ctx context.Context, params MergeMergeRequestParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MergeMergeRequest", ctx, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MergeMergeRequest indicates an expected call of MergeMergeRequest.
+func (mr *MockClientMockRecorder) MergeMergeRequest(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeMergeRequest", reflect.TypeOf((*MockClient)(nil).MergeMergeRequest), ctx, params)
+}

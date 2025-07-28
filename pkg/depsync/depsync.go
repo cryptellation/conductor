@@ -1,4 +1,4 @@
-package conductor
+package depsync
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-// Conductor represents the main conductor application that orchestrates
+// DepSync represents the main depsync application that orchestrates
 // repository file fetching and processing.
-type Conductor struct {
+type DepSync struct {
 	config          *config.Config
 	client          github.Client
 	fetcher         repo.FilesFetcher
@@ -27,8 +27,8 @@ type Conductor struct {
 	dagger          dagger.Dagger
 }
 
-// New creates a new Conductor instance with the given configuration and GitHub token.
-func New(cfg *config.Config, token string) (*Conductor, error) {
+// New creates a new DepSync instance with the given configuration and GitHub token.
+func New(cfg *config.Config, token string) (*DepSync, error) {
 	client := github.New(token)
 
 	// Create dagger adapter with context
@@ -38,7 +38,7 @@ func New(cfg *config.Config, token string) (*Conductor, error) {
 		return nil, fmt.Errorf("failed to create dagger adapter: %w", err)
 	}
 
-	return &Conductor{
+	return &DepSync{
 		config:          cfg,
 		client:          client,
 		fetcher:         repo.NewFilesFetcher(client),
@@ -49,16 +49,16 @@ func New(cfg *config.Config, token string) (*Conductor, error) {
 	}, nil
 }
 
-// Close closes the Conductor and its resources.
-func (c *Conductor) Close() error {
+// Close closes the DepSync and its resources.
+func (c *DepSync) Close() error {
 	if c.dagger != nil {
 		return c.dagger.Close()
 	}
 	return nil
 }
 
-// Run executes the main conductor workflow, fetching files from configured repositories.
-func (c *Conductor) Run(ctx context.Context) error {
+// Run executes the main depsync workflow, fetching files from configured repositories.
+func (c *DepSync) Run(ctx context.Context) error {
 	if len(c.config.Repositories) == 0 {
 		return fmt.Errorf("no repositories configured")
 	}
@@ -108,7 +108,7 @@ func (c *Conductor) Run(ctx context.Context) error {
 }
 
 // fixModules handles the dependency update workflow using the Dagger adapter.
-func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[string]depgraph.Mismatch) error {
+func (c *DepSync) fixModules(ctx context.Context, mismatches map[string]map[string]depgraph.Mismatch) error {
 	logger := logging.C(ctx)
 	logger.Info("Starting fixModules workflow", zap.Int("service_count", len(mismatches)))
 
@@ -146,7 +146,7 @@ func (c *Conductor) fixModules(ctx context.Context, mismatches map[string]map[st
 // updateDependency updates a single dependency for a service.
 //
 //nolint:funlen // This function orchestrates a complex workflow that's difficult to break down further
-func (c *Conductor) updateDependency(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
+func (c *DepSync) updateDependency(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
 	repoURL string) (string, error) {
 	logger := logging.C(ctx)
 	logger.Info("Updating dependency",
@@ -235,7 +235,7 @@ func (c *Conductor) updateDependency(ctx context.Context, service, dep string, m
 }
 
 // manageMergeRequest creates a merge request for the updated dependency.
-func (c *Conductor) manageMergeRequest(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
+func (c *DepSync) manageMergeRequest(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
 	repoURL, branchName string) error {
 	logger := logging.C(ctx)
 	logger.Info("Creating merge request",
@@ -258,14 +258,14 @@ func (c *Conductor) manageMergeRequest(ctx context.Context, service, dep string,
 		}
 	}
 
-	// Check and log CI/CD status
-	c.checkAndLogCIStatus(ctx, service, dep, repoURL, prNumber)
+	// Check and merge MR if checks pass
+	c.checkAndMergeMR(ctx, service, dep, mismatch, repoURL, prNumber)
 
 	return nil
 }
 
 // checkExistingPullRequest checks if a pull request already exists for the given branch.
-func (c *Conductor) checkExistingPullRequest(ctx context.Context, service, dep, repoURL, branchName string) (
+func (c *DepSync) checkExistingPullRequest(ctx context.Context, service, dep, repoURL, branchName string) (
 	int, error) {
 	logger := logging.C(ctx)
 	prNumber, err := c.client.CheckPullRequestExists(ctx, github.CheckPullRequestExistsParams{
@@ -294,7 +294,7 @@ func (c *Conductor) checkExistingPullRequest(ctx context.Context, service, dep, 
 }
 
 // createMergeRequest creates a new merge request.
-func (c *Conductor) createMergeRequest(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
+func (c *DepSync) createMergeRequest(ctx context.Context, service, dep string, mismatch depgraph.Mismatch,
 	repoURL, branchName string) (int, error) {
 	logger := logging.C(ctx)
 	prNumber, err := c.client.CreateMergeRequest(ctx, github.CreateMergeRequestParams{
@@ -322,8 +322,9 @@ func (c *Conductor) createMergeRequest(ctx context.Context, service, dep string,
 	return prNumber, nil
 }
 
-// checkAndLogCIStatus checks the CI/CD status and logs the result.
-func (c *Conductor) checkAndLogCIStatus(ctx context.Context, service, dep, repoURL string, prNumber int) {
+// checkAndMergeMR checks the CI/CD status and merges the MR if checks pass.
+func (c *DepSync) checkAndMergeMR(ctx context.Context, service, dep string,
+	mismatch depgraph.Mismatch, repoURL string, prNumber int) {
 	logger := logging.C(ctx)
 	checkStatus, err := c.client.GetPullRequestChecks(ctx, github.GetPullRequestChecksParams{
 		RepoURL:  repoURL,
@@ -347,7 +348,23 @@ func (c *Conductor) checkAndLogCIStatus(ctx context.Context, service, dep, repoU
 			zap.String("dependency", dep),
 			zap.Int("pr_number", prNumber))
 	case "passed":
-		logger.Info("CI/CD checks have passed",
+		logger.Info("CI/CD checks have passed, attempting to merge",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Int("pr_number", prNumber))
+
+		if err := c.mergeMergeRequest(ctx, service, dep, mismatch, repoURL, prNumber); err != nil {
+			logger.Error("Failed to merge pull request",
+				zap.String("service", service),
+				zap.String("dependency", dep),
+				zap.Int("pr_number", prNumber),
+				zap.Error(err))
+
+			// Continue with other MRs, don't fail the entire process
+			return
+		}
+
+		logger.Info("Successfully merged pull request",
 			zap.String("service", service),
 			zap.String("dependency", dep),
 			zap.Int("pr_number", prNumber))
@@ -357,6 +374,34 @@ func (c *Conductor) checkAndLogCIStatus(ctx context.Context, service, dep, repoU
 			zap.String("dependency", dep),
 			zap.Int("pr_number", prNumber))
 	}
+}
+
+// mergeMergeRequest merges the specified pull request.
+func (c *DepSync) mergeMergeRequest(ctx context.Context, service, dep string,
+	mismatch depgraph.Mismatch, repoURL string, prNumber int) error {
+	logger := logging.C(ctx)
+
+	err := c.client.MergeMergeRequest(ctx, github.MergeMergeRequestParams{
+		RepoURL:       repoURL,
+		PRNumber:      prNumber,
+		ModulePath:    dep,
+		TargetVersion: mismatch.Latest,
+	})
+	if err != nil {
+		logger.Error("Failed to merge pull request",
+			zap.String("service", service),
+			zap.String("dependency", dep),
+			zap.Int("pr_number", prNumber),
+			zap.Error(err))
+		return err
+	}
+
+	logger.Info("Pull request merged successfully",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.Int("pr_number", prNumber))
+
+	return nil
 }
 
 // sanitizeBranchName sanitizes a string to be used as a git branch name.
@@ -376,11 +421,11 @@ func sanitizeBranchName(name string) string {
 
 // generateBranchName generates a consistent branch name for dependency updates.
 func generateBranchName(modulePath, targetVersion string) string {
-	return fmt.Sprintf("conductor/update-%s-%s", sanitizeBranchName(modulePath), targetVersion)
+	return fmt.Sprintf("depsync/update-%s-%s", sanitizeBranchName(modulePath), targetVersion)
 }
 
 // fetchModules fetches go.mod files and builds the input map for the dependency graph builder.
-func (c *Conductor) fetchModules(ctx context.Context) (map[string]depgraph.RepoModule, error) {
+func (c *DepSync) fetchModules(ctx context.Context) (map[string]depgraph.RepoModule, error) {
 	modules := make(map[string]depgraph.RepoModule)
 	for _, repo := range c.config.Repositories {
 		logging.C(ctx).Info("Fetching go.mod for repository",
@@ -414,7 +459,7 @@ func (c *Conductor) fetchModules(ctx context.Context) (map[string]depgraph.RepoM
 }
 
 // printDependencyGraph prints the dependency graph in a readable format.
-func (c *Conductor) printDependencyGraph(ctx context.Context, graph map[string]*depgraph.Service) {
+func (c *DepSync) printDependencyGraph(ctx context.Context, graph map[string]*depgraph.Service) {
 	logging.C(ctx).Info("Dependency graph:")
 	for module, svc := range graph {
 		logging.C(ctx).Info("Module dependencies",
@@ -433,7 +478,7 @@ func depKeys(m map[string]depgraph.Dependency) []string {
 }
 
 // printCurrentVersions prints the module path and CurrentVersion for each root service.
-func (c *Conductor) printCurrentVersions(ctx context.Context, graph map[string]*depgraph.Service) {
+func (c *DepSync) printCurrentVersions(ctx context.Context, graph map[string]*depgraph.Service) {
 	logging.C(ctx).Info("Detected versions:")
 	for module, svc := range graph {
 		logging.C(ctx).Info("Module version",
@@ -443,11 +488,11 @@ func (c *Conductor) printCurrentVersions(ctx context.Context, graph map[string]*
 	}
 }
 
-// RunWithLogging executes the conductor workflow with logging.
-func (c *Conductor) RunWithLogging(ctx context.Context) {
+// RunWithLogging executes the depsync workflow with logging.
+func (c *DepSync) RunWithLogging(ctx context.Context) {
 	logging.C(ctx).Info("Loaded configuration", zap.Any("config", c.config))
 
 	if err := c.Run(ctx); err != nil {
-		logging.C(ctx).Fatal("Error running conductor", zap.Error(err))
+		logging.C(ctx).Fatal("Error running depsync", zap.Error(err))
 	}
 }

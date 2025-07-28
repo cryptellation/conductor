@@ -1,4 +1,4 @@
-// A generated module for Conductor functions
+// A generated module for DepSyncunctions
 //
 // This module has been generated via dagger init and serves as a reference to
 // basic module structure as you get started with Dagger.
