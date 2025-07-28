@@ -1,4 +1,4 @@
-module dagger/conductor
+module dagger/depsync
 
 go 1.23.8
 

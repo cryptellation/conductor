@@ -1,5 +1,5 @@
 {
-  "name": "conductor",
+  "name": "DepSync",
   "engineVersion": "v0.18.14",
   "sdk": {
     "source": "go"

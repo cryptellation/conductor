@@ -18,7 +18,7 @@ repositories:
 
 func TestLoad(t *testing.T) {
 	dir := t.TempDir()
-	file := dir + "/conductor.yaml"
+	file := dir + "/depsync.yaml"
 	if err := os.WriteFile(file, []byte(testYAML), 0644); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
 	}

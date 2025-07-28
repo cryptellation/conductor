@@ -1,10 +1,10 @@
-# Conductor
+# Depsync
 
-Golang dependencies coordinator for polyrepository projects on GitHub
+Golang dependencies synchronizer for polyrepository projects on GitHub
 
 ## Overview
 
-Conductor is a tool designed to manage and coordinate dependencies between multiple services and libraries in a polyrepository (multi-repo) architecture. It automates the process of tracking, updating, and integrating dependencies across various repositories, ensuring that all services and libraries remain compatible and up-to-date.
+Depsync is a tool designed to manage and coordinate dependencies between multiple services and libraries in a polyrepository (multi-repo) architecture. It automates the process of tracking, updating, and integrating dependencies across various repositories, ensuring that all services and libraries remain compatible and up-to-date.
 
 ## Key Features
 
@@ -23,7 +23,7 @@ Conductor is a tool designed to manage and coordinate dependencies between multi
 ## Workflow
 
 1. **Dependency Analysis:**
-   - Conductor scans the provided list of libraries and services, building a dependency graph.
+   - Depsync scans the provided list of libraries and services, building a dependency graph.
    - It identifies which services depend on which libraries, and which libraries or services are common dependencies.
 
 2. **Version Detection:**
@@ -31,11 +31,11 @@ Conductor is a tool designed to manage and coordinate dependencies between multi
    - When a new version is detected, it determines which downstream services or libraries are affected.
 
 3. **Automated Updates:**
-   - For each affected repository, Conductor creates a merge request to update the dependency version.
+   - For each affected repository, Depsync creates a merge request to update the dependency version.
    - It monitors the status of these MRs, ensuring that all required updates are merged.
 
 4. **Integration Update:**
-   - Once all dependent repositories have been updated and merged, Conductor creates a merge request in the integration repository (e.g., Docker Compose or Helm Chart repo).
+   - Once all dependent repositories have been updated and merged, Depsync creates a merge request in the integration repository (e.g., Docker Compose or Helm Chart repo).
    - This final MR ensures that the deployment configuration references the latest versions of all components.
 
 ## Use Cases

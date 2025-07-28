@@ -7,11 +7,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cryptellation/conductor/pkg/adapters/dagger"
-	"github.com/cryptellation/conductor/pkg/adapters/github"
-	"github.com/cryptellation/conductor/pkg/config"
-	"github.com/cryptellation/conductor/pkg/depgraph"
-	"github.com/cryptellation/conductor/pkg/repo"
+	"github.com/cryptellation/depsync/pkg/adapters/dagger"
+	"github.com/cryptellation/depsync/pkg/adapters/github"
+	"github.com/cryptellation/depsync/pkg/config"
+	"github.com/cryptellation/depsync/pkg/depgraph"
+	"github.com/cryptellation/depsync/pkg/repo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )

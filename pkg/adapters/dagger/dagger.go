@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"dagger.io/dagger"
-	"github.com/cryptellation/conductor/pkg/logging"
+	"github.com/cryptellation/depsync/pkg/logging"
 	"go.uber.org/zap"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/cryptellation/conductor/pkg/adapters/github"
+	"github.com/cryptellation/depsync/pkg/adapters/github"
 )
 
 //go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=files_fetcher.go -destination=mock_fetcher.gen.go -package=repo
