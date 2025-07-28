@@ -10,10 +10,8 @@ import (
 
 const testYAML = `
 repositories:
-  - name: testrepo1
-    url: https://github.com/example/testrepo1.git
-  - name: testrepo2
-    url: https://github.com/example/testrepo2.git
+  - https://github.com/example/testrepo1.git
+  - https://github.com/example/testrepo2.git
 `
 
 func TestLoad(t *testing.T) {
@@ -31,7 +29,7 @@ func TestLoad(t *testing.T) {
 	if len(cfg.Repositories) != 2 {
 		t.Errorf("expected 2 repositories, got %d", len(cfg.Repositories))
 	}
-	if cfg.Repositories[0].Name != "testrepo1" || cfg.Repositories[1].Name != "testrepo2" {
-		t.Errorf("unexpected repository names: %+v", cfg.Repositories)
+	if cfg.Repositories[0] != "https://github.com/example/testrepo1.git" || cfg.Repositories[1] != "https://github.com/example/testrepo2.git" {
+		t.Errorf("unexpected repository URLs: %+v", cfg.Repositories)
 	}
 }

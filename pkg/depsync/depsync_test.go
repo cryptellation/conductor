@@ -68,7 +68,7 @@ func newTestDepSync(t *testing.T, cfg *config.Config) *TestDepSync {
 
 func TestDepSync_Run_NoRepositories(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{},
+		Repositories: []string{},
 	}
 
 	tc := newTestDepSync(t, cfg)
@@ -84,8 +84,8 @@ func TestDepSync_Run_NoRepositories(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_Success(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 		Git: config.GitConfig{
 			Author: config.GitAuthor{
@@ -182,8 +182,8 @@ func TestDepSync_Run_WithRepositories_Success(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_ChecksPassAndMerge(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 		Git: config.GitConfig{
 			Author: config.GitAuthor{
@@ -300,8 +300,8 @@ func TestDepSync_Run_WithRepositories_ChecksPassAndMerge(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_MergeFails(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 		Git: config.GitConfig{
 			Author: config.GitAuthor{
@@ -410,9 +410,9 @@ func TestDepSync_Run_WithRepositories_MergeFails(t *testing.T) {
 
 func TestDepSync_Run_WithMultipleRepositories_Success(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "repo1", URL: "https://github.com/test/repo1"},
-			{Name: "repo2", URL: "https://github.com/test/repo2"},
+		Repositories: []string{
+			"https://github.com/test/repo1",
+			"https://github.com/test/repo2",
 		},
 	}
 
@@ -451,8 +451,8 @@ func TestDepSync_Run_WithMultipleRepositories_Success(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_FetchError(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 	}
 
@@ -473,8 +473,8 @@ func TestDepSync_Run_WithRepositories_FetchError(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_DependencyUpdateError(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 	}
 
@@ -528,8 +528,8 @@ func TestDepSync_Run_WithRepositories_DependencyUpdateError(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_BranchExists(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 		Git: config.GitConfig{
 			Author: config.GitAuthor{
@@ -605,8 +605,8 @@ func TestDepSync_Run_WithRepositories_BranchExists(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_CheckBranchExistsError(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 	}
 
@@ -655,8 +655,8 @@ func TestDepSync_Run_WithRepositories_CheckBranchExistsError(t *testing.T) {
 
 func TestDepSync_Run_WithRepositories_CommitAndPushError(t *testing.T) {
 	cfg := &config.Config{
-		Repositories: []config.Repository{
-			{Name: "test", URL: "https://github.com/test/repo"},
+		Repositories: []string{
+			"https://github.com/test/repo",
 		},
 		Git: config.GitConfig{
 			Author: config.GitAuthor{
