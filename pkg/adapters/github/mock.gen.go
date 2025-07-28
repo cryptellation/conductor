@@ -71,6 +71,20 @@ func (mr *MockClientMockRecorder) CreateMergeRequest(ctx, params any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMergeRequest", reflect.TypeOf((*MockClient)(nil).CreateMergeRequest), ctx, params)
 }
 
+// DeleteBranch mocks base method.
+func (m *MockClient) DeleteBranch(ctx context.Context, params DeleteBranchParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBranch", ctx, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBranch indicates an expected call of DeleteBranch.
+func (mr *MockClientMockRecorder) DeleteBranch(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBranch", reflect.TypeOf((*MockClient)(nil).DeleteBranch), ctx, params)
+}
+
 // GetFileContent mocks base method.
 func (m *MockClient) GetFileContent(ctx context.Context, params GetFileContentParams) ([]byte, error) {
 	m.ctrl.T.Helper()
