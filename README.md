@@ -17,7 +17,7 @@ Depsync is a tool designed to manage and coordinate dependencies between multipl
   - Tracks the status of these MRs to ensure all dependent services are updated accordingly.
 
 - **Integration Coordination:**
-  - Once all dependent services and libraries have been updated and their MRs have been merged, Conductor can create a final MR in the integration repository (such as a Docker Compose or Helm Chart repository).
+  - Once all dependent services and libraries have been updated and their MRs have been merged, DepSync can create a final MR in the integration repository (such as a Docker Compose or Helm Chart repository).
   - This ensures that the integration layer always references the latest, compatible versions of all services and libraries, reducing the risk of integration issues.
 
 ## Workflow

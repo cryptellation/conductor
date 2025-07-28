@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/cryptellation/depsync/pkg/conductor"
 	"github.com/cryptellation/depsync/pkg/config"
+	"github.com/cryptellation/depsync/pkg/depsync"
 	"github.com/cryptellation/depsync/pkg/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -30,7 +30,7 @@ func main() {
 				logging.L().Fatal("GITHUB_TOKEN environment variable is not set")
 			}
 
-			c, err := conductor.New(cfg, token)
+			c, err := depsync.New(cfg, token)
 			if err != nil {
 				logging.L().Fatal("Failed to create depsync", zap.Error(err))
 			}

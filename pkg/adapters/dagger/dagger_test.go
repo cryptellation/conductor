@@ -129,7 +129,7 @@ func TestDagger_CheckBranchExists_NonExistingBranch(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check for a non-existing branch
-	branchName := "conductor/update-github-com-test-dep-v1.1.0"
+	branchName := "depsync/update-github-com-test-dep-v1.1.0"
 
 	exists, err := daggerAdapter.CheckBranchExists(ctx, CheckBranchExistsParams{
 		Dir:        dir,
