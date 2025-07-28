@@ -210,12 +210,13 @@ func (c *DepSync) updateDependency(ctx context.Context, service, dep string, mis
 
 	// Commit and push the changes
 	_, err = c.dagger.CommitAndPush(ctx, dagger.CommitAndPushParams{
-		Dir:         updatedDir,
-		BranchName:  branchName,
-		ModulePath:  dep,
-		AuthorName:  c.config.Git.Author.Name,
-		AuthorEmail: c.config.Git.Author.Email,
-		RepoURL:     repoURL,
+		Dir:           updatedDir,
+		BranchName:    branchName,
+		ModulePath:    dep,
+		TargetVersion: mismatch.Latest,
+		AuthorName:    c.config.Git.Author.Name,
+		AuthorEmail:   c.config.Git.Author.Email,
+		RepoURL:       repoURL,
 	})
 	if err != nil {
 		logger.Error("Failed to commit and push changes",
