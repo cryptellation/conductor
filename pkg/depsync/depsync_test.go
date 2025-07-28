@@ -136,12 +136,13 @@ func TestDepSync_Run_WithRepositories_Success(t *testing.T) {
 		TargetVersion: "v1.1.0",
 	}).Return(nil, nil)
 	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
-		Dir:         nil,
-		BranchName:  "depsync/update-github-com-test-dep-v1.1.0",
-		ModulePath:  "github.com/test/dep",
-		AuthorName:  "DepSync Bot",
-		AuthorEmail: "depsync@example.com",
-		RepoURL:     "https://github.com/test/repo",
+		Dir:           nil,
+		BranchName:    "depsync/update-github-com-test-dep-v1.1.0",
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		AuthorName:    "DepSync Bot",
+		AuthorEmail:   "depsync@example.com",
+		RepoURL:       "https://github.com/test/repo",
 	}).Return("depsync/update-github-com-test-dep-v1.1.0", nil)
 
 	// Mock the CheckPullRequestExists call (returns -1 - no existing PR)
@@ -233,12 +234,13 @@ func TestDepSync_Run_WithRepositories_ChecksPassAndMerge(t *testing.T) {
 		TargetVersion: "v1.1.0",
 	}).Return(nil, nil)
 	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
-		Dir:         nil,
-		BranchName:  "depsync/update-github-com-test-dep-v1.1.0",
-		ModulePath:  "github.com/test/dep",
-		AuthorName:  "DepSync Bot",
-		AuthorEmail: "depsync@example.com",
-		RepoURL:     "https://github.com/test/repo",
+		Dir:           nil,
+		BranchName:    "depsync/update-github-com-test-dep-v1.1.0",
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		AuthorName:    "DepSync Bot",
+		AuthorEmail:   "depsync@example.com",
+		RepoURL:       "https://github.com/test/repo",
 	}).Return("depsync/update-github-com-test-dep-v1.1.0", nil)
 
 	// Mock the CheckPullRequestExists call (returns -1 - no existing PR)
@@ -350,12 +352,13 @@ func TestDepSync_Run_WithRepositories_MergeFails(t *testing.T) {
 		TargetVersion: "v1.1.0",
 	}).Return(nil, nil)
 	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
-		Dir:         nil,
-		BranchName:  "depsync/update-github-com-test-dep-v1.1.0",
-		ModulePath:  "github.com/test/dep",
-		AuthorName:  "DepSync Bot",
-		AuthorEmail: "depsync@example.com",
-		RepoURL:     "https://github.com/test/repo",
+		Dir:           nil,
+		BranchName:    "depsync/update-github-com-test-dep-v1.1.0",
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		AuthorName:    "DepSync Bot",
+		AuthorEmail:   "depsync@example.com",
+		RepoURL:       "https://github.com/test/repo",
 	}).Return("depsync/update-github-com-test-dep-v1.1.0", nil)
 
 	// Mock the CheckPullRequestExists call (returns -1 - no existing PR)
@@ -704,12 +707,13 @@ func TestDepSync_Run_WithRepositories_CommitAndPushError(t *testing.T) {
 		TargetVersion: "v1.1.0",
 	}).Return(nil, nil)
 	tc.MockDagger.EXPECT().CommitAndPush(gomock.Any(), dagger.CommitAndPushParams{
-		Dir:         nil,
-		BranchName:  "depsync/update-github-com-test-dep-v1.1.0",
-		ModulePath:  "github.com/test/dep",
-		AuthorName:  "DepSync Bot",
-		AuthorEmail: "depsync@example.com",
-		RepoURL:     "https://github.com/test/repo",
+		Dir:           nil,
+		BranchName:    "depsync/update-github-com-test-dep-v1.1.0",
+		ModulePath:    "github.com/test/dep",
+		TargetVersion: "v1.1.0",
+		AuthorName:    "DepSync Bot",
+		AuthorEmail:   "depsync@example.com",
+		RepoURL:       "https://github.com/test/repo",
 	}).Return("", assert.AnError)
 
 	// No CheckPullRequestExists or CreateMergeRequest calls expected since CommitAndPush failed

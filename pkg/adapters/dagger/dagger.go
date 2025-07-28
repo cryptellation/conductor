@@ -27,12 +27,13 @@ type CheckBranchExistsParams struct {
 
 // CommitAndPushParams contains parameters for CommitAndPush.
 type CommitAndPushParams struct {
-	Dir         *dagger.Directory
-	BranchName  string
-	ModulePath  string
-	AuthorName  string
-	AuthorEmail string
-	RepoURL     string
+	Dir           *dagger.Directory
+	BranchName    string
+	ModulePath    string
+	TargetVersion string
+	AuthorName    string
+	AuthorEmail   string
+	RepoURL       string
 }
 
 // Dagger defines the interface for Dagger operations.
@@ -204,7 +205,7 @@ func (d *daggerAdapter) CommitAndPush(ctx context.Context, params CommitAndPushP
 		zap.String("module_path", params.ModulePath),
 		zap.String("branch_name", params.BranchName))
 
-	commitMessage := fmt.Sprintf("fix(dependencies): update %s", params.ModulePath)
+	commitMessage := fmt.Sprintf("fix(dependencies): update %s to %s", params.ModulePath, params.TargetVersion)
 
 	// Set up the token as a Dagger secret
 	secret := d.client.SetSecret("github_token", d.githubToken)

@@ -197,9 +197,23 @@ func (c *client) MergeMergeRequest(ctx context.Context, params MergeMergeRequest
 		return err
 	}
 
+	// Update the PR title to the desired commit message format before merging
+	// This ensures the squash merge uses the correct commit message
+	parts := strings.Split(params.ModulePath, "/")
+	dependencyName := parts[len(parts)-1]
+	desiredCommitMessage := fmt.Sprintf("fix(dependencies): update %s to %s", dependencyName, params.TargetVersion)
+
+	// Update the pull request title
+	_, _, err = c.gh.PullRequests.Edit(ctx, owner, repo, params.PRNumber, &github.PullRequest{
+		Title: &desiredCommitMessage,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update pull request title: %w", err)
+	}
+
 	// Merge the pull request with squash strategy
-	commitMessage := fmt.Sprintf("fix(dependencies): update %s to %s", params.ModulePath, params.TargetVersion)
-	_, _, err = c.gh.PullRequests.Merge(ctx, owner, repo, params.PRNumber, commitMessage, &github.PullRequestOptions{
+	// The commit message will now be the updated PR title
+	_, _, err = c.gh.PullRequests.Merge(ctx, owner, repo, params.PRNumber, "", &github.PullRequestOptions{
 		MergeMethod: "squash",
 	})
 	if err != nil {
