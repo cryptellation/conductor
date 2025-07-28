@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"sort"
 
-	"github.com/cryptellation/conductor/pkg/adapters/github"
-	"github.com/cryptellation/conductor/pkg/depgraph"
+	"github.com/cryptellation/depsync/pkg/adapters/github"
+	"github.com/cryptellation/depsync/pkg/depgraph"
 	gh "github.com/google/go-github/v55/github"
 	"golang.org/x/mod/semver"
 )

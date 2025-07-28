@@ -15,10 +15,10 @@
 package main
 
 import (
-	"dagger/conductor/internal/dagger"
+	"dagger/depsync/internal/dagger"
 )
 
-type Conductor struct{}
+type DepSync struct{}
 
 // withGoCodeAndCacheAsWorkDirectory mounts Go caches, source, and sets workdir for tests.
 func withGoCodeAndCacheAsWorkDirectory(c *dagger.Container, sourceDir *dagger.Directory) *dagger.Container {
@@ -31,7 +31,7 @@ func withGoCodeAndCacheAsWorkDirectory(c *dagger.Container, sourceDir *dagger.Di
 }
 
 // IntegrationTests runs all Go tests in pkg/adapters/ with the integration build tag.
-func (m *Conductor) IntegrationTests(sourceDir *dagger.Directory, githubToken *dagger.Secret) *dagger.Container {
+func (m *DepSync) IntegrationTests(sourceDir *dagger.Directory, githubToken *dagger.Secret) *dagger.Container {
 	c := dag.Container().From("golang:1.24")
 	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
 	c = c.WithSecretVariable("GITHUB_TOKEN", githubToken)
@@ -39,7 +39,7 @@ func (m *Conductor) IntegrationTests(sourceDir *dagger.Directory, githubToken *d
 }
 
 // Lint runs golangci-lint on the main repo (./...) only.
-func (m *Conductor) Lint(sourceDir *dagger.Directory) *dagger.Container {
+func (m *DepSync) Lint(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().
 		From("golangci/golangci-lint:v1.62.0").
 		WithMountedCache("/root/.cache/golangci-lint", dag.CacheVolume("golangci-lint"))
@@ -54,7 +54,7 @@ func (m *Conductor) Lint(sourceDir *dagger.Directory) *dagger.Container {
 }
 
 // LintDagger runs golangci-lint on the .dagger directory only.
-func (m *Conductor) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
+func (m *DepSync) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().
 		From("golangci/golangci-lint:v1.62.0").
 		WithMountedCache("/root/.cache/golangci-lint", dag.CacheVolume("golangci-lint"))
@@ -69,14 +69,14 @@ func (m *Conductor) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 }
 
 // UnitTests runs all Go unit tests in pkg/ (excluding adapters/) with the unit build tag.
-func (m *Conductor) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
+func (m *DepSync) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:1.24")
 	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
 	return c.WithExec([]string{"go", "test", "-tags=unit", "./pkg/...", "-v"})
 }
 
 // Generate runs 'go generate ./...' and then 'sh scripts/check-generation.sh' in the repo.
-func (m *Conductor) Generate(sourceDir *dagger.Directory) *dagger.Container {
+func (m *DepSync) Generate(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:1.24-alpine")
 	c = withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
 	return c.WithExec([]string{"sh", "-c", "go generate ./... && sh scripts/check-generation.sh"})

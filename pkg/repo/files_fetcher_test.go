@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cryptellation/conductor/pkg/adapters/github"
+	"github.com/cryptellation/depsync/pkg/adapters/github"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )

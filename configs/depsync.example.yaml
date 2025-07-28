@@ -1,0 +1,13 @@
+# Depsync Configuration File
+# This file defines repositories managed by Depsync.
+
+repositories:
+  - name: repo1
+    url: https://github.com/example/repo1.git
+  - name: repo2
+    url: https://github.com/example/repo2.git
+
+git:
+  author:
+    name: "Depsync Bot"
+    email: "depsync@example.com" 

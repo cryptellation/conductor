@@ -1,4 +1,4 @@
-module github.com/cryptellation/conductor
+module github.com/cryptellation/depsync
 
 go 1.23.8
 
