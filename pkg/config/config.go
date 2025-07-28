@@ -13,14 +13,9 @@ type GitConfig struct {
 	Author GitAuthor `mapstructure:"author"`
 }
 
-type Repository struct {
-	Name string `mapstructure:"name"`
-	URL  string `mapstructure:"url"`
-}
-
 type Config struct {
-	Repositories []Repository `mapstructure:"repositories"`
-	Git          GitConfig    `mapstructure:"git"`
+	Repositories []string  `mapstructure:"repositories"`
+	Git          GitConfig `mapstructure:"git"`
 }
 
 func Load(configPath string) (*Config, error) {

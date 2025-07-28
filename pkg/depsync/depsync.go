@@ -448,30 +448,29 @@ func generateBranchName(modulePath, targetVersion string) string {
 // fetchModules fetches go.mod files and builds the input map for the dependency graph builder.
 func (c *DepSync) fetchModules(ctx context.Context) (map[string]depgraph.RepoModule, error) {
 	modules := make(map[string]depgraph.RepoModule)
-	for _, repo := range c.config.Repositories {
+	for _, repoURL := range c.config.Repositories {
 		logging.C(ctx).Info("Fetching go.mod for repository",
-			zap.String("name", repo.Name),
-			zap.String("url", repo.URL),
+			zap.String("url", repoURL),
 		)
-		results, err := c.fetcher.Fetch(ctx, repo.URL, "main", "go.mod")
+		results, err := c.fetcher.Fetch(ctx, repoURL, "main", "go.mod")
 		if err != nil {
-			return nil, fmt.Errorf("error fetching go.mod for %s: %w", repo.Name, err)
+			return nil, fmt.Errorf("error fetching go.mod for %s: %w", repoURL, err)
 		}
 		content, ok := results["go.mod"]
 		if !ok {
-			return nil, fmt.Errorf("go.mod not found in repository: %s", repo.Name)
+			return nil, fmt.Errorf("go.mod not found in repository: %s", repoURL)
 		}
 		mf, err := modfile.Parse("go.mod", content, nil)
 		if err != nil || mf.Module == nil {
-			return nil, fmt.Errorf("could not parse module path for repo %s: %w", repo.Name, err)
+			return nil, fmt.Errorf("could not parse module path for repo %s: %w", repoURL, err)
 		}
 		modulePath := mf.Module.Mod.Path
 		modules[modulePath] = depgraph.RepoModule{
-			RepoURL:      repo.URL,
+			RepoURL:      repoURL,
 			GoModContent: content,
 		}
 		logging.C(ctx).Info("Repository module info",
-			zap.String("name", repo.Name),
+			zap.String("url", repoURL),
 			zap.String("module_path", modulePath),
 			zap.Int("go_mod_size", len(content)),
 		)
