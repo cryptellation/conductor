@@ -41,6 +41,21 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
+// CheckMergeConflicts mocks base method.
+func (m *MockClient) CheckMergeConflicts(ctx context.Context, params CheckMergeConflictsParams) (*MergeConflictInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckMergeConflicts", ctx, params)
+	ret0, _ := ret[0].(*MergeConflictInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckMergeConflicts indicates an expected call of CheckMergeConflicts.
+func (mr *MockClientMockRecorder) CheckMergeConflicts(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckMergeConflicts", reflect.TypeOf((*MockClient)(nil).CheckMergeConflicts), ctx, params)
+}
+
 // CheckPullRequestExists mocks base method.
 func (m *MockClient) CheckPullRequestExists(ctx context.Context, params CheckPullRequestExistsParams) (int, error) {
 	m.ctrl.T.Helper()
@@ -83,6 +98,20 @@ func (m *MockClient) DeleteBranch(ctx context.Context, params DeleteBranchParams
 func (mr *MockClientMockRecorder) DeleteBranch(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBranch", reflect.TypeOf((*MockClient)(nil).DeleteBranch), ctx, params)
+}
+
+// DeletePullRequest mocks base method.
+func (m *MockClient) DeletePullRequest(ctx context.Context, params DeletePullRequestParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePullRequest", ctx, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePullRequest indicates an expected call of DeletePullRequest.
+func (mr *MockClientMockRecorder) DeletePullRequest(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePullRequest", reflect.TypeOf((*MockClient)(nil).DeletePullRequest), ctx, params)
 }
 
 // GetFileContent mocks base method.

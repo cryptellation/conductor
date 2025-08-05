@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cryptellation/depsync/pkg/adapters"
 	"github.com/google/go-github/v55/github"
 	"golang.org/x/oauth2"
 )
+
+// DepSyncPRTitlePrefix is the prefix used for DepSync pull request titles.
+const DepSyncPRTitlePrefix = "chores(depsync):"
 
 // GetFileContentParams contains parameters for GetFileContent.
 type GetFileContentParams struct {
@@ -52,6 +56,23 @@ type DeleteBranchParams struct {
 	BranchName string
 }
 
+type DeletePullRequestParams struct {
+	RepoURL  string
+	PRNumber int
+}
+
+// CheckMergeConflictsParams contains parameters for CheckMergeConflicts.
+type CheckMergeConflictsParams struct {
+	RepoURL  string
+	PRNumber int
+}
+
+// MergeConflictInfo contains information about merge conflicts.
+type MergeConflictInfo struct {
+	HasConflicts    bool
+	ConflictedFiles []string
+}
+
 // CheckStatus represents the status of CI/CD checks for a pull request.
 type CheckStatus struct {
 	Status string // "running", "passed", "failed"
@@ -66,6 +87,9 @@ type Client interface {
 	GetPullRequestChecks(ctx context.Context, params GetPullRequestChecksParams) (*CheckStatus, error)
 	MergeMergeRequest(ctx context.Context, params MergeMergeRequestParams) error
 	DeleteBranch(ctx context.Context, params DeleteBranchParams) error
+	DeletePullRequest(ctx context.Context, params DeletePullRequestParams) error
+	CheckMergeConflicts(ctx context.Context,
+		params CheckMergeConflictsParams) (*MergeConflictInfo, error)
 }
 
 // client implements Client using go-github.
@@ -190,6 +214,75 @@ func (c *client) GetPullRequestChecks(ctx context.Context, params GetPullRequest
 	return determineCheckStatus(checkRuns.CheckRuns), nil
 }
 
+// CheckMergeConflicts checks if a pull request has merge conflicts.
+func (c *client) CheckMergeConflicts(ctx context.Context,
+	params CheckMergeConflictsParams) (*MergeConflictInfo, error) {
+	owner, repo, err := extractOwnerAndRepo(params.RepoURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the pull request to check for conflicts
+	pr, _, err := c.gh.PullRequests.Get(ctx, owner, repo, params.PRNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pull request: %w", err)
+	}
+
+	// Check mergeable state
+	mergeableState := pr.GetMergeableState()
+
+	// GitHub API can return null or unknown when mergeability hasn't been computed yet
+	// We need to handle these cases
+	var hasConflicts bool
+	var conflictedFiles []string
+
+	switch mergeableState {
+	case "clean":
+		// No conflicts
+		hasConflicts = false
+		conflictedFiles = []string{}
+	case "conflicting", "unstable", "dirty", "blocked":
+		// Has conflicts - get the actual list of conflicted files
+		hasConflicts = true
+		conflictedFiles, err = c.getConflictedFiles(ctx, owner, repo, params.PRNumber)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get conflicted files: %w", err)
+		}
+	default:
+		// Unknown state, return an error
+		return nil, fmt.Errorf("unknown mergeable state: %q", mergeableState)
+	}
+
+	return &MergeConflictInfo{
+		HasConflicts:    hasConflicts,
+		ConflictedFiles: conflictedFiles,
+	}, nil
+}
+
+// getConflictedFiles retrieves the list of files with conflicts in a pull request.
+func (c *client) getConflictedFiles(ctx context.Context, owner, repo string, prNumber int) ([]string, error) {
+	// Get the pull request to find the head and base commits
+	pr, _, err := c.gh.PullRequests.Get(ctx, owner, repo, prNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pull request: %w", err)
+	}
+
+	// Get the comparison between base and head to find modified files
+	comparison, _, err := c.gh.Repositories.CompareCommits(ctx, owner, repo, *pr.Base.SHA, *pr.Head.SHA, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compare commits: %w", err)
+	}
+
+	// Since we know there are conflicts (from mergeableState),
+	// all modified files in the comparison are potentially conflicted
+	var conflictedFiles []string
+	for _, file := range comparison.Files {
+		conflictedFiles = append(conflictedFiles, file.GetFilename())
+	}
+
+	return conflictedFiles, nil
+}
+
 // MergeMergeRequest merges a pull request.
 func (c *client) MergeMergeRequest(ctx context.Context, params MergeMergeRequestParams) error {
 	owner, repo, err := extractOwnerAndRepo(params.RepoURL)
@@ -197,22 +290,8 @@ func (c *client) MergeMergeRequest(ctx context.Context, params MergeMergeRequest
 		return err
 	}
 
-	// Update the PR title to the desired commit message format before merging
-	// This ensures the squash merge uses the correct commit message
-	parts := strings.Split(params.ModulePath, "/")
-	dependencyName := parts[len(parts)-1]
-	desiredCommitMessage := fmt.Sprintf("fix(dependencies): update %s to %s", dependencyName, params.TargetVersion)
-
-	// Update the pull request title
-	_, _, err = c.gh.PullRequests.Edit(ctx, owner, repo, params.PRNumber, &github.PullRequest{
-		Title: &desiredCommitMessage,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update pull request title: %w", err)
-	}
-
 	// Merge the pull request with squash strategy
-	// The commit message will now be the updated PR title
+	// The commit message will be the PR title (which is already in the correct format)
 	_, _, err = c.gh.PullRequests.Merge(ctx, owner, repo, params.PRNumber, "", &github.PullRequestOptions{
 		MergeMethod: "squash",
 	})
@@ -234,6 +313,24 @@ func (c *client) DeleteBranch(ctx context.Context, params DeleteBranchParams) er
 	_, err = c.gh.Git.DeleteRef(ctx, owner, repo, fmt.Sprintf("refs/heads/%s", params.BranchName))
 	if err != nil {
 		return fmt.Errorf("failed to delete branch %s: %w", params.BranchName, err)
+	}
+
+	return nil
+}
+
+// DeletePullRequest closes a pull request in a GitHub repository.
+func (c *client) DeletePullRequest(ctx context.Context, params DeletePullRequestParams) error {
+	owner, repo, err := extractOwnerAndRepo(params.RepoURL)
+	if err != nil {
+		return err
+	}
+
+	// Close the pull request by updating its state to "closed"
+	_, _, err = c.gh.PullRequests.Edit(ctx, owner, repo, params.PRNumber, &github.PullRequest{
+		State: github.String("closed"),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to close pull request %d: %w", params.PRNumber, err)
 	}
 
 	return nil
@@ -275,10 +372,7 @@ func determineCheckStatus(checkRuns []*github.CheckRun) *CheckStatus {
 
 // generateMRTitle generates the title for a merge request.
 func generateMRTitle(modulePath, targetVersion string) string {
-	// Extract the last part of the module path for a cleaner title
-	parts := strings.Split(modulePath, "/")
-	dependencyName := parts[len(parts)-1]
-	return fmt.Sprintf("[DepSync] Update %s to %s", dependencyName, targetVersion)
+	return adapters.FormatCommitMessage(modulePath, targetVersion)
 }
 
 // generateMRDescription generates the description for a merge request.

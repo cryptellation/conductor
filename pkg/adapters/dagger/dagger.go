@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"dagger.io/dagger"
+	"github.com/cryptellation/depsync/pkg/adapters"
 	"github.com/cryptellation/depsync/pkg/logging"
 	"go.uber.org/zap"
 )
@@ -90,6 +91,12 @@ func (d *daggerAdapter) CloneRepo(ctx context.Context, repoURL, branch string) (
 				"git clone --depth=1 --branch %s https://$GITHUB_TOKEN@%s /repo", branch, repoURL[8:], // strip https://
 			),
 		})
+
+	// Ensure we're on main and pull latest changes
+	// This handles the case where Dagger reuses an old cached directory
+	container = container.WithExec([]string{"sh", "-c", "cd /repo && git checkout main"})
+	container = container.WithExec([]string{"sh", "-c", "cd /repo && git pull origin main"})
+
 	dir := container.Directory("/repo")
 
 	// Check if the directory exists by listing files (fail fast)
@@ -98,7 +105,7 @@ func (d *daggerAdapter) CloneRepo(ctx context.Context, repoURL, branch string) (
 		logger.Error("Failed to clone repository", zap.Error(err))
 		return nil, fmt.Errorf("failed to clone repository: %w", err)
 	}
-	logger.Info("Repository cloned", zap.Strings("files", entries))
+	logger.Info("Repository cloned and updated", zap.Strings("files", entries))
 	return dir, nil
 }
 
@@ -205,7 +212,8 @@ func (d *daggerAdapter) CommitAndPush(ctx context.Context, params CommitAndPushP
 		zap.String("module_path", params.ModulePath),
 		zap.String("branch_name", params.BranchName))
 
-	commitMessage := fmt.Sprintf("fix(dependencies): update %s to %s", params.ModulePath, params.TargetVersion)
+	// Format the commit message
+	commitMessage := adapters.FormatCommitMessage(params.ModulePath, params.TargetVersion)
 
 	// Set up the token as a Dagger secret
 	secret := d.client.SetSecret("github_token", d.githubToken)

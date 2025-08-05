@@ -251,16 +251,112 @@ func (c *DepSync) manageMergeRequest(ctx context.Context, service, dep string, m
 		return err
 	}
 
-	// If no PR exists, create it
+	// If no PR exists, create it and return
 	if prNumber == -1 {
-		prNumber, err = c.createMergeRequest(ctx, service, dep, mismatch, repoURL, branchName)
-		if err != nil {
-			return err
-		}
+		_, err = c.createMergeRequest(ctx, service, dep, mismatch, repoURL, branchName)
+		return err
 	}
 
-	// Check and merge MR if checks pass
+	// Conflict check and deletion for existing PR
+	deleted, err := c.handlePRConflicts(ctx, service, dep, mismatch, repoURL, prNumber, branchName)
+	if err != nil {
+		logger.Error("Failed to handle PR conflicts", zap.Error(err))
+		return err
+	} else if deleted {
+		// Skip checkAndMergeMR if deletion was performed
+		return nil
+	}
+
+	// Check and merge MR if checks pass for newly created PR
 	c.checkAndMergeMR(ctx, service, dep, mismatch, repoURL, prNumber, branchName)
+
+	return nil
+}
+
+// handlePRConflicts checks for conflicts in an existing PR and deletes it if needed.
+func (c *DepSync) handlePRConflicts(ctx context.Context, service, dep string, _ depgraph.Mismatch,
+	repoURL string, prNumber int, branchName string) (bool, error) {
+	logger := logging.C(ctx)
+
+	// Check if delete conflicted PRs is enabled
+	if !c.config.DeleteConflictedPRs {
+		logger.Debug("Delete conflicted PRs is disabled")
+		return false, nil
+	}
+
+	logger.Info("Checking for conflicts in existing PR",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.Int("pr_number", prNumber))
+
+	// Check for merge conflicts
+	conflictInfo, err := c.client.CheckMergeConflicts(ctx, github.CheckMergeConflictsParams{
+		RepoURL:  repoURL,
+		PRNumber: prNumber,
+	})
+	if err != nil {
+		logger.Error("Failed to check merge conflicts", zap.Error(err))
+		return false, err
+	}
+
+	if !conflictInfo.HasConflicts {
+		logger.Info("No conflicts detected in PR")
+		return false, nil
+	}
+
+	logger.Info("Conflicts detected in PR, deleting PR and branch",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.Int("pr_number", prNumber),
+		zap.Strings("conflicted_files", conflictInfo.ConflictedFiles))
+
+	// Delete the conflicted PR and branch
+	if err := c.deleteConflictedPR(ctx, service, dep, repoURL, prNumber, branchName); err != nil {
+		logger.Error("Failed to delete conflicted PR", zap.Error(err))
+		return false, err
+	}
+
+	logger.Info("Conflicted PR deleted successfully",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.Int("pr_number", prNumber))
+
+	return true, nil
+}
+
+// deleteConflictedPR deletes a conflicted PR and its associated branch.
+func (c *DepSync) deleteConflictedPR(ctx context.Context, service, dep string,
+	repoURL string, prNumber int, branchName string) error {
+	logger := logging.C(ctx)
+	logger.Info("Deleting conflicted PR and branch",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.Int("pr_number", prNumber),
+		zap.String("branch_name", branchName))
+
+	// Close the pull request
+	if err := c.client.DeletePullRequest(ctx, github.DeletePullRequestParams{
+		RepoURL:  repoURL,
+		PRNumber: prNumber,
+	}); err != nil {
+		logger.Error("Failed to close pull request", zap.Error(err))
+		return fmt.Errorf("failed to close pull request: %w", err)
+	}
+
+	// Delete the branch
+	if err := c.client.DeleteBranch(ctx, github.DeleteBranchParams{
+		RepoURL:    repoURL,
+		BranchName: branchName,
+	}); err != nil {
+		logger.Error("Failed to delete branch", zap.Error(err))
+		return fmt.Errorf("failed to delete branch: %w", err)
+	}
+
+	logger.Info("Successfully deleted conflicted PR and branch",
+		zap.String("service", service),
+		zap.String("dependency", dep),
+		zap.Int("pr_number", prNumber),
+		zap.String("branch_name", branchName))
 
 	return nil
 }
