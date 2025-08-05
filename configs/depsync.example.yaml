@@ -1,10 +1,15 @@
 # Depsync Configuration File
 # This file defines repositories managed by Depsync.
 
+# Global setting - enable/disable deletion of conflicted PRs (default: true)
+delete_conflicted_prs: true
+
+# List of repositories to manage
 repositories:
   - https://github.com/example/repo1.git
   - https://github.com/example/repo2.git
 
+# Git configuration
 git:
   author:
     name: "Depsync Bot"
