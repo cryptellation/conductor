@@ -42,10 +42,10 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // CheckMergeConflicts mocks base method.
-func (m *MockClient) CheckMergeConflicts(ctx context.Context, params CheckMergeConflictsParams) (*MergeConflictInfo, error) {
+func (m *MockClient) CheckMergeConflicts(ctx context.Context, params CheckMergeConflictsParams) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckMergeConflicts", ctx, params)
-	ret0, _ := ret[0].(*MergeConflictInfo)
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -5,9 +5,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cryptellation/depsync/pkg/adapters"
+	"github.com/cryptellation/depsync/pkg/logging"
 	"github.com/google/go-github/v55/github"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 )
 
@@ -67,12 +70,6 @@ type CheckMergeConflictsParams struct {
 	PRNumber int
 }
 
-// MergeConflictInfo contains information about merge conflicts.
-type MergeConflictInfo struct {
-	HasConflicts    bool
-	ConflictedFiles []string
-}
-
 // CheckStatus represents the status of CI/CD checks for a pull request.
 type CheckStatus struct {
 	Status string // "running", "passed", "failed"
@@ -88,8 +85,7 @@ type Client interface {
 	MergeMergeRequest(ctx context.Context, params MergeMergeRequestParams) error
 	DeleteBranch(ctx context.Context, params DeleteBranchParams) error
 	DeletePullRequest(ctx context.Context, params DeletePullRequestParams) error
-	CheckMergeConflicts(ctx context.Context,
-		params CheckMergeConflictsParams) (*MergeConflictInfo, error)
+	CheckMergeConflicts(ctx context.Context, params CheckMergeConflictsParams) (bool, error)
 }
 
 // client implements Client using go-github.
@@ -214,73 +210,74 @@ func (c *client) GetPullRequestChecks(ctx context.Context, params GetPullRequest
 	return determineCheckStatus(checkRuns.CheckRuns), nil
 }
 
-// CheckMergeConflicts checks if a pull request has merge conflicts.
-func (c *client) CheckMergeConflicts(ctx context.Context,
-	params CheckMergeConflictsParams) (*MergeConflictInfo, error) {
-	owner, repo, err := extractOwnerAndRepo(params.RepoURL)
-	if err != nil {
-		return nil, err
-	}
+// checkMergeConflictsWithRetry performs the actual merge conflict check with retry logic.
+func (c *client) checkMergeConflictsWithRetry(ctx context.Context, owner, repo string, prNumber int) (bool, error) {
+	maxRetries := 5
+	baseDelay := time.Second * 2
 
-	// Get the pull request to check for conflicts
-	pr, _, err := c.gh.PullRequests.Get(ctx, owner, repo, params.PRNumber)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get pull request: %w", err)
-	}
-
-	// Check mergeable state
-	mergeableState := pr.GetMergeableState()
-
-	// GitHub API can return null or unknown when mergeability hasn't been computed yet
-	// We need to handle these cases
-	var hasConflicts bool
-	var conflictedFiles []string
-
-	switch mergeableState {
-	case "clean":
-		// No conflicts
-		hasConflicts = false
-		conflictedFiles = []string{}
-	case "conflicting", "unstable", "dirty", "blocked":
-		// Has conflicts - get the actual list of conflicted files
-		hasConflicts = true
-		conflictedFiles, err = c.getConflictedFiles(ctx, owner, repo, params.PRNumber)
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// Get the pull request to check for conflicts
+		pr, _, err := c.gh.PullRequests.Get(ctx, owner, repo, prNumber)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get conflicted files: %w", err)
+			return false, fmt.Errorf("failed to get pull request: %w", err)
 		}
-	default:
-		// Unknown state, return an error
-		return nil, fmt.Errorf("unknown mergeable state: %q", mergeableState)
+
+		// Check mergeable state
+		mergeableState := pr.GetMergeableState()
+
+		// GitHub API can return null or unknown when mergeability hasn't been computed yet
+		// We need to handle these cases
+		var hasConflicts bool
+
+		switch mergeableState {
+		case "clean":
+			// No conflicts
+			hasConflicts = false
+		case "conflicting":
+			// Has actual merge conflicts
+			hasConflicts = true
+		case "unstable", "dirty", "blocked":
+			// These states don't indicate merge conflicts:
+			// - "unstable": Usually failing CI checks
+			// - "dirty": Usually needs rebase
+			// - "blocked": Usually branch protection rules
+			hasConflicts = false
+		case "unknown":
+			// GitHub hasn't computed mergeability yet, wait and retry
+			if attempt < maxRetries-1 {
+				delay := baseDelay * time.Duration(1<<attempt) // Exponential backoff
+				logging.L().Info("Mergeability not yet computed for PR",
+					zap.Int("pr_number", prNumber),
+					zap.Int("attempt", attempt+1),
+					zap.Int("max_retries", maxRetries),
+					zap.Duration("delay", delay),
+				)
+				time.Sleep(delay)
+				continue
+			}
+			// If we've exhausted all retries, return an error
+			return false, fmt.Errorf("mergeability not yet computed after %d retries, please try again later", maxRetries)
+		default:
+			// Unknown state, return an error
+			return false, fmt.Errorf("unknown mergeable state: %q", mergeableState)
+		}
+
+		return hasConflicts, nil
 	}
 
-	return &MergeConflictInfo{
-		HasConflicts:    hasConflicts,
-		ConflictedFiles: conflictedFiles,
-	}, nil
+	// This should never be reached, but just in case
+	return false, fmt.Errorf("unexpected retry loop exit")
 }
 
-// getConflictedFiles retrieves the list of files with conflicts in a pull request.
-func (c *client) getConflictedFiles(ctx context.Context, owner, repo string, prNumber int) ([]string, error) {
-	// Get the pull request to find the head and base commits
-	pr, _, err := c.gh.PullRequests.Get(ctx, owner, repo, prNumber)
+// CheckMergeConflicts checks if a pull request has merge conflicts.
+func (c *client) CheckMergeConflicts(ctx context.Context,
+	params CheckMergeConflictsParams) (bool, error) {
+	owner, repo, err := extractOwnerAndRepo(params.RepoURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get pull request: %w", err)
+		return false, err
 	}
 
-	// Get the comparison between base and head to find modified files
-	comparison, _, err := c.gh.Repositories.CompareCommits(ctx, owner, repo, *pr.Base.SHA, *pr.Head.SHA, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compare commits: %w", err)
-	}
-
-	// Since we know there are conflicts (from mergeableState),
-	// all modified files in the comparison are potentially conflicted
-	var conflictedFiles []string
-	for _, file := range comparison.Files {
-		conflictedFiles = append(conflictedFiles, file.GetFilename())
-	}
-
-	return conflictedFiles, nil
+	return c.checkMergeConflictsWithRetry(ctx, owner, repo, params.PRNumber)
 }
 
 // MergeMergeRequest merges a pull request.
