@@ -95,7 +95,9 @@ func (d *daggerAdapter) CloneRepo(ctx context.Context, repoURL, branch string) (
 	// Ensure we're on main and pull latest changes
 	// This handles the case where Dagger reuses an old cached directory
 	container = container.WithExec([]string{"sh", "-c", "cd /repo && git checkout main"})
-	container = container.WithExec([]string{"sh", "-c", "cd /repo && git pull origin main"})
+	// Add a cache buster to ensure git pull is always executed
+	container = container.WithExec([]string{"sh", "-c",
+		fmt.Sprintf("cd /repo && git pull origin main && echo 'Pull completed at: %d'", time.Now().Unix())})
 
 	dir := container.Directory("/repo")
 

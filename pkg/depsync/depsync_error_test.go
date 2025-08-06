@@ -189,4 +189,4 @@ func TestDepSync_Run_WithRepositories_CommitAndPushError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to fix modules")
-} 
+}
