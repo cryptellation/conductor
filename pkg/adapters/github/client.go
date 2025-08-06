@@ -233,13 +233,14 @@ func (c *client) checkMergeConflictsWithRetry(ctx context.Context, owner, repo s
 		case "clean":
 			// No conflicts
 			hasConflicts = false
-		case "conflicting":
+		case "conflicting", "dirty":
 			// Has actual merge conflicts
+			// - "conflicting": Has merge conflicts
+			// - "dirty": Cannot be merged due to conflicts (same as conflicting)
 			hasConflicts = true
-		case "unstable", "dirty", "blocked":
+		case "unstable", "blocked":
 			// These states don't indicate merge conflicts:
 			// - "unstable": Usually failing CI checks
-			// - "dirty": Usually needs rebase
 			// - "blocked": Usually branch protection rules
 			hasConflicts = false
 		case "unknown":
