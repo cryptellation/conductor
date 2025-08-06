@@ -274,8 +274,14 @@ func (c *DepSync) manageMergeRequest(ctx context.Context, service, dep string, m
 }
 
 // handlePRConflicts checks for conflicts in an existing PR and deletes it if needed.
-func (c *DepSync) handlePRConflicts(ctx context.Context, service, dep string, _ depgraph.Mismatch,
-	repoURL string, prNumber int, branchName string) (bool, error) {
+func (c *DepSync) handlePRConflicts(
+	ctx context.Context,
+	service, dep string,
+	_ depgraph.Mismatch,
+	repoURL string,
+	prNumber int,
+	branchName string,
+) (bool, error) {
 	logger := logging.C(ctx)
 
 	// Check if delete conflicted PRs is enabled

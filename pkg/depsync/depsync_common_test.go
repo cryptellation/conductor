@@ -62,4 +62,4 @@ func newTestDepSync(t *testing.T, cfg *config.Config) *TestDepSync {
 		MockDagger:          mockDagger,
 		MockGitHubClient:    mockGitHubClient,
 	}
-} 
+}
