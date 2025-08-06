@@ -290,7 +290,7 @@ func (c *DepSync) handlePRConflicts(ctx context.Context, service, dep string, _ 
 		zap.Int("pr_number", prNumber))
 
 	// Check for merge conflicts
-	conflictInfo, err := c.client.CheckMergeConflicts(ctx, github.CheckMergeConflictsParams{
+	hasConflicts, err := c.client.CheckMergeConflicts(ctx, github.CheckMergeConflictsParams{
 		RepoURL:  repoURL,
 		PRNumber: prNumber,
 	})
@@ -299,7 +299,7 @@ func (c *DepSync) handlePRConflicts(ctx context.Context, service, dep string, _ 
 		return false, err
 	}
 
-	if !conflictInfo.HasConflicts {
+	if !hasConflicts {
 		logger.Info("No conflicts detected in PR")
 		return false, nil
 	}
@@ -307,8 +307,7 @@ func (c *DepSync) handlePRConflicts(ctx context.Context, service, dep string, _ 
 	logger.Info("Conflicts detected in PR, deleting PR and branch",
 		zap.String("service", service),
 		zap.String("dependency", dep),
-		zap.Int("pr_number", prNumber),
-		zap.Strings("conflicted_files", conflictInfo.ConflictedFiles))
+		zap.Int("pr_number", prNumber))
 
 	// Delete the conflicted PR and branch
 	if err := c.deleteConflictedPR(ctx, service, dep, repoURL, prNumber, branchName); err != nil {

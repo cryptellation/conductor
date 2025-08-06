@@ -82,10 +82,7 @@ func TestDepSync_Run_WithRepositories_DeleteConflictedPRsEnabled(t *testing.T) {
 			RepoURL:  "https://github.com/test/repo",
 			PRNumber: 123,
 		},
-	).Return(&github.MergeConflictInfo{
-		HasConflicts:    true,
-		ConflictedFiles: []string{"go.mod", "go.sum"},
-	}, nil)
+	).Return(true, nil)
 
 	// Mock the deletion operations
 	tc.MockGitHubClient.EXPECT().DeletePullRequest(
@@ -268,10 +265,7 @@ func TestDepSync_Run_WithRepositories_DeleteConflictedPRsError(t *testing.T) {
 			RepoURL:  "https://github.com/test/repo",
 			PRNumber: 123,
 		},
-	).Return(&github.MergeConflictInfo{
-		HasConflicts:    true,
-		ConflictedFiles: []string{"go.mod", "go.sum"},
-	}, nil)
+	).Return(true, nil)
 
 	// Mock the deletion operations - PR deletion fails
 	tc.MockGitHubClient.EXPECT().DeletePullRequest(
